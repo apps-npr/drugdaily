@@ -1,24 +1,39 @@
 :root {
-    --bg-color: #e0e5ec;
-    --text-main: #4a5568;
-    --text-light: #a0aec0;
-    --primary-color: #3182ce;
-    --primary-gradient: linear-gradient(135deg, #4F72FF 0%, #2044F0 100%);
-    --success-color: #38a169;
-    --danger-color: #e53e3e;
+    /* โทนสีเขียวสดใส สบายตา */
+    --bg-grad-1: #00F260;
+    --bg-grad-2: #0575E6;
+    --glass-bg: rgba(255, 255, 255, 0.25);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
     
-    /* เงา Neumorphism */
-    --shadow-out: 9px 9px 16px rgba(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5);
-    --shadow-in: inset 6px 6px 10px rgba(163, 177, 198, 0.6), inset -6px -6px 10px rgba(255, 255, 255, 0.5);
-    --shadow-btn-out: 5px 5px 10px rgba(163, 177, 198, 0.6), -5px -5px 10px rgba(255, 255, 255, 0.5);
-    --shadow-btn-in: inset 4px 4px 8px rgba(163, 177, 198, 0.6), inset -4px -4px 8px rgba(255, 255, 255, 0.5);
+    --text-dark: #064e3b; /* สีเขียวเข้มสำหรับอ่านง่าย */
+    --text-light: #ffffff;
+    --primary-color: #10b981;
+    --danger-color: #ef4444;
 }
 
 body {
     font-family: 'Kanit', sans-serif;
-    background-color: var(--bg-color);
-    color: var(--text-main);
+    background: linear-gradient(135deg, var(--bg-grad-1) 0%, var(--bg-grad-2) 100%);
+    background-attachment: fixed;
+    color: var(--text-dark);
     margin: 0; padding: 0; padding-bottom: 80px;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* วงกลมตกแต่งพื้นหลังให้ดูมีมิติแบบแอปสมัยใหม่ */
+.bg-shape {
+    position: absolute; border-radius: 50%; filter: blur(60px); z-index: -1;
+}
+.shape-1 {
+    width: 300px; height: 300px; background: rgba(255,255,255,0.4);
+    top: -50px; left: -50px;
+}
+.shape-2 {
+    width: 400px; height: 400px; background: rgba(5, 117, 230, 0.3);
+    bottom: 10%; right: -100px;
 }
 
 /* Utilities */
@@ -26,137 +41,137 @@ body {
 .mt-20 { margin-top: 20px; }
 .p-15 { padding: 15px; }
 .hidden { display: none !important; }
-.title-text { color: var(--text-main); font-weight: 500; font-size: 1.3rem; margin-bottom: 20px; }
-.subtitle-text { color: var(--text-main); font-weight: 500; font-size: 1.1rem; margin-bottom: 10px; }
-.primary-text { color: var(--primary-color); }
-.success-text { color: var(--success-color); }
-.danger-text { color: var(--danger-color); }
+.title-text { font-weight: 600; font-size: 1.4rem; margin-bottom: 20px; color: var(--text-dark); }
+.subtitle-text { font-weight: 500; font-size: 1.2rem; margin-bottom: 10px; color: var(--text-dark); }
+.status-text { text-align: center; font-weight: bold; margin-top: 15px; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
 
-/* Neumorphism Elements */
-.neo-header {
-    background-color: var(--bg-color);
-    padding: 20px; text-align: center;
-    box-shadow: 0 4px 10px rgba(163, 177, 198, 0.3);
+/* Glassmorphism Classes */
+.glass-header {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--glass-border);
+    padding: 20px; text-align: center; color: white;
     margin-bottom: 20px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
-
-.neo-header h1 { margin: 0; font-size: 1.3rem; font-weight: 500; }
+.glass-header h1 { margin: 0; font-size: 1.5rem; font-weight: 500; }
 
 main { padding: 0 15px; max-width: 800px; margin: auto; }
 
-.neo-card {
-    background: var(--bg-color);
-    border-radius: 20px;
-    box-shadow: var(--shadow-out);
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    box-shadow: var(--glass-shadow);
     padding: 25px;
     margin-bottom: 25px;
 }
 
-.neo-inset {
-    background: var(--bg-color);
-    border-radius: 15px;
-    box-shadow: var(--shadow-in);
+.glass-inner {
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.5);
+    padding: 15px;
 }
 
-.neo-input {
-    width: 100%;
-    padding: 15px;
-    background: var(--bg-color);
-    border: none;
-    border-radius: 12px;
-    box-shadow: var(--shadow-in);
-    color: var(--text-main);
-    font-family: 'Kanit', sans-serif;
-    font-size: 1rem;
-    box-sizing: border-box;
-    margin-bottom: 20px;
-    outline: none;
+.glass-input {
+    width: 100%; padding: 16px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 2px solid transparent;
+    border-radius: 16px;
+    color: var(--text-dark);
+    font-family: 'Kanit', sans-serif; font-size: 1.1rem;
+    box-sizing: border-box; margin-bottom: 20px;
+    transition: 0.3s;
 }
+.glass-input:focus { border-color: white; outline: none; background: rgba(255, 255, 255, 0.8); }
 
 /* Buttons */
-.btn-group { display: flex; flex-direction: column; gap: 15px; }
+.btn-group { display: flex; flex-direction: column; gap: 12px; }
 
-.neo-btn {
-    background: var(--bg-color);
-    border: none;
-    border-radius: 12px;
-    padding: 15px;
-    font-size: 1rem;
-    font-family: 'Kanit', sans-serif;
-    color: var(--text-main);
-    font-weight: 500;
-    box-shadow: var(--shadow-btn-out);
-    cursor: pointer;
-    transition: all 0.2s ease;
+.glass-btn {
+    padding: 16px; font-size: 1.1rem; font-family: 'Kanit', sans-serif; font-weight: 600;
+    border: none; border-radius: 50px; /* ปุ่มโค้งมนแบบยาแคปซูล */
+    cursor: pointer; transition: all 0.3s ease;
     width: 100%;
 }
+.glass-btn.primary { background: white; color: var(--primary-color); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+.glass-btn.primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+.glass-btn.danger { background: var(--danger-color); color: white; }
+.glass-btn.outline { background: transparent; border: 2px solid white; color: white; }
+.small-btn { padding: 8px 20px; width: auto; font-size: 1rem; }
 
-.neo-btn:active { box-shadow: var(--shadow-btn-in); }
-
-.neo-btn.primary { background: var(--primary-gradient); color: white; box-shadow: 4px 4px 10px rgba(32, 68, 240, 0.4); }
-.neo-btn.primary:active { box-shadow: inset 4px 4px 10px rgba(0, 0, 0, 0.2); }
-.neo-btn.danger { color: var(--danger-color); font-weight: 600; }
-
-/* Ward Grid */
-.ward-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+/* Ward Grid - ปรับแต่งให้ตัวหนังสือใหญ่ชัดเจนมาก */
+.ward-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
 
 .ward-card {
-    background: var(--bg-color);
-    border-radius: 15px;
-    padding: 15px 10px;
+    background: rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 20px;
+    padding: 20px 10px;
     text-align: center;
-    box-shadow: var(--shadow-btn-out);
-    cursor: pointer;
-    transition: all 0.2s;
-    user-select: none;
-    border: 2px solid transparent;
+    cursor: pointer; transition: all 0.2s; user-select: none;
+}
+.ward-card:active { transform: scale(0.95); }
+
+/* ขยายชื่อ Ward ให้ใหญ่และเด่นชัด */
+.ward-card h3 { 
+    margin: 0 0 10px 0; 
+    font-size: 1.5rem; /* ตัวใหญ่มาก */
+    font-weight: 700; 
+    color: var(--text-dark);
+    line-height: 1.2;
 }
 
-.ward-card h3 { margin: 0 0 8px 0; font-size: 0.95rem; font-weight: 500; }
-.ward-card .time-stamp { font-size: 0.85rem; color: var(--text-light); }
+.ward-card .time-stamp { 
+    font-size: 1rem; 
+    color: #047857; 
+    background: rgba(255,255,255,0.5);
+    border-radius: 10px;
+    padding: 4px 0;
+}
 
-/* สถานะรับยาแล้ว (กดให้บุ๋มลงไป และมีขอบเขียวอ่อนๆ) */
+/* สถานะรับยาแล้ว (เปลี่ยนเป็นสีขาวทึบให้ตัดกับพื้นหลัง) */
 .ward-card.completed {
-    box-shadow: var(--shadow-btn-in);
-    border: 2px solid rgba(56, 161, 105, 0.5);
+    background: white;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    border-color: white;
 }
-.ward-card.completed h3 { color: var(--success-color); }
-.ward-card.completed .time-stamp { color: var(--success-color); font-weight: 500; }
+.ward-card.completed h3 { color: var(--primary-color); }
+.ward-card.completed .time-stamp { background: #d1fae5; color: #065f46; font-weight: 600; }
 
 /* Dashboard UI */
-.header-dash { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; }
-.header-dash h2 { margin: 0; }
-.header-dash button { width: auto; padding: 8px 15px; }
-.filters { display: flex; flex-direction: column; gap: 0; padding: 20px; }
+.header-dash { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px; margin-bottom: 15px; }
+.filters { display: flex; flex-direction: column; gap: 0; }
 .filters select { margin-bottom: 10px; }
 
-.stats-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-.stat-box { padding: 15px; text-align: center; }
-.stat-label { margin: 0 0 5px 0; font-size: 0.9rem; color: var(--text-light); }
-.stat-value { margin: 0; font-size: 1.4rem; }
+.stats-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.stat-box { text-align: center; }
+.stat-label { margin: 0 0 5px 0; font-size: 0.95rem; font-weight: 500;}
+.stat-value { margin: 0; font-size: 1.6rem; color: var(--primary-color); font-weight: 700;}
 
-.history-list { max-height: 300px; overflow-y: auto; padding: 10px; border-radius: 15px; }
+.history-list { max-height: 300px; overflow-y: auto; }
 .history-item { 
     display: flex; justify-content: space-between; align-items: center; 
-    padding: 12px; border-bottom: 1px solid rgba(163,177,198,0.2); 
-    font-size: 0.95rem;
+    padding: 12px; border-bottom: 1px dashed rgba(0,0,0,0.1); 
+    font-size: 1rem; font-weight: 500;
 }
 .history-item:last-child { border-bottom: none; }
-.history-date { font-weight: 500; }
-.history-time { color: var(--text-light); font-size: 0.9rem;}
 
 .z-pattern-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
-.ranking-list { padding-left: 20px; margin: 0; font-size: 0.95rem; }
-.ranking-list li { margin-bottom: 8px; color: var(--text-main); }
+.ranking-list { padding-left: 20px; margin: 0; font-size: 1rem; font-weight: 500; }
+.ranking-list li { margin-bottom: 10px; }
 
-.neo-badge {
+.glass-badge {
     position: fixed; bottom: 20px; right: 20px;
-    background: var(--bg-color);
-    color: var(--primary-color);
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-weight: 600;
-    box-shadow: var(--shadow-out);
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    color: var(--text-dark);
+    padding: 12px 25px;
+    border-radius: 50px;
+    font-weight: 700; font-size: 1.1rem;
+    box-shadow: var(--glass-shadow);
     z-index: 1000;
 }
 
