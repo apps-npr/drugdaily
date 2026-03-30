@@ -16,38 +16,71 @@
             <h2>เลือกเภสัชกรผู้ปฏิบัติงาน</h2>
             <select id="pharmacistSelect">
                 <option value="">-- กรุณาเลือกชื่อ --</option>
-                </select>
+            </select>
             <button id="startShiftBtn" class="btn primary">เริ่มการทำงาน</button>
+            <button id="showLoginBtn" class="btn secondary" style="margin-top: 10px;">ดูสถิติ (Admin)</button>
         </section>
 
         <section id="workSection" class="hidden">
             <div class="action-bar">
-                <button id="endShiftBtn" class="btn danger">จบการทำงาน</button>
-                <button id="toggleDashboardBtn" class="btn secondary">ดู Dashboard</button>
+                <button id="endShiftBtn" class="btn danger">จบการทำงานและบันทึก</button>
             </div>
-
             <h2>รายชื่อหอผู้ป่วยรับยา</h2>
-            <div id="wardGrid" class="ward-grid">
-                </div>
+            <div id="wardGrid" class="ward-grid"></div>
+            <p id="syncStatus" class="status-text"></p>
         </section>
 
-        <section id="dashboardSection" class="hidden card">
-            <h2>สรุปข้อมูล (Dashboard)</h2>
-            <div class="stats-container">
-                <p><strong>ผู้ปฏิบัติงาน:</strong> <span id="dashPharmacist">-</span></p>
-                <p><strong>เวลาเริ่มงาน:</strong> <span id="dashStartTime">-</span></p>
-                <p><strong>เวลาสิ้นสุด:</strong> <span id="dashEndTime">-</span></p>
-                <p><strong>ระยะเวลารวม:</strong> <span id="dashTotalTime">-</span></p>
+        <section id="loginSection" class="hidden card">
+            <h2>เข้าสู่ระบบ Admin</h2>
+            <input type="password" id="adminPass" placeholder="ใส่รหัสผ่านจาก Google Sheets" style="width:100%; padding:10px; margin-bottom:10px;">
+            <button id="loginBtn" class="btn primary">เข้าสู่ระบบ</button>
+            <button id="cancelLoginBtn" class="btn danger">ยกเลิก</button>
+            <p id="loginStatus" class="status-text"></p>
+        </section>
+
+        <section id="dashboardSection" class="hidden card full-width">
+            <div class="dash-header">
+                <h2>📊 Dashboard สรุปข้อมูลรับยา</h2>
+                <button id="closeDashBtn" class="btn danger" style="width: auto;">ปิด</button>
             </div>
-            <button id="syncDataBtn" class="btn success">บันทึกข้อมูลลง Google Sheets</button>
-            <p id="syncStatus" class="status-text"></p>
+            
+            <div class="filters">
+                <select id="filterTime">
+                    <option value="all">ข้อมูลทั้งหมด</option>
+                    <option value="30days">ย้อนหลัง 30 วัน</option>
+                    <option value="1year">ย้อนหลัง 1 ปี</option>
+                </select>
+                <select id="filterDay">
+                    <option value="all">ทุกวัน</option>
+                    <option value="weekday">เฉพาะวันธรรมดา</option>
+                    <option value="weekend">เฉพาะวันหยุด (ส.-อา.)</option>
+                </select>
+            </div>
+
+            <div class="z-pattern-grid">
+                <div class="dash-box">
+                    <h3>เวรปัจจุบัน</h3>
+                    <p><strong>ผู้ปฏิบัติงาน:</strong> <span id="dashPharmacist">-</span></p>
+                    <p><strong>เริ่ม:</strong> <span id="dashStartTime">-</span></p>
+                    <p><strong>จบ:</strong> <span id="dashEndTime">-</span></p>
+                </div>
+                <div class="dash-box">
+                    <h3>สถิติการรับยา (ประวัติ)</h3>
+                    <p>จำนวนเวรทั้งหมดที่บันทึก: <span id="statTotalShifts">0</span> เวร</p>
+                </div>
+                <div class="dash-box highlight-green">
+                    <h3>🏆 วอร์ดที่รับยาไวที่สุด (เฉลี่ย)</h3>
+                    <ol id="fastestWardsList"><li>ไม่มีข้อมูล</li></ol>
+                </div>
+                <div class="dash-box highlight-red">
+                    <h3>🐢 วอร์ดที่รับยาช้าที่สุด (เฉลี่ย)</h3>
+                    <ol id="slowestWardsList"><li>ไม่มีข้อมูล</li></ol>
+                </div>
+            </div>
         </section>
     </main>
 
-    <div id="pharmacistBadge" class="badge hidden">
-        <span id="badgeName"></span>
-    </div>
-
+    <div id="pharmacistBadge" class="badge hidden"><span id="badgeName"></span></div>
     <script src="script.js"></script>
 </body>
 </html>
