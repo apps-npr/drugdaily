@@ -1,6 +1,7 @@
-// URL ของ Google Apps Script Web App อันใหม่ของคุณ
-const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzgpd3F4STzP210MfJcsQRHwZnLRLjp82w3sD7Efu2mNnyZ6h8dVE96j8TLGcp6YoDfMg/exec"; // ถ้าแก้ Code.gs แล้ว Deploy ใหม่ ต้องอัปเดต URL นี้ด้วยนะครับ
+// URL ของ Google Apps Script Web App ของคุณ
+const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzgpd3F4STzP210MfJcsQRHwZnLRLjp82w3sD7Efu2mNnyZ6h8dVE96j8TLGcp6YoDfMg/exec";
 
+// ข้อมูลตั้งต้น
 const wards = [
     "MICU", "Med พิเศษเดี่ยวชั้น 14", "Med พิเศษรวมชั้น 12", "Med ส.ชาย ชั้น 11",
     "SEMI ชาย ชั้น 11", "SEMI หญิง ชั้น 10", "Stroke unit ชั้น 10", 
@@ -21,35 +22,41 @@ const pharmacists = [
     "ภก.วิศรุต สมบูรณ์วงศ์ (มาร์ค)", "ภญ.ธนัชพร ชัยวัฒนกุล(นัท)"
 ];
 
+// ตัวแปร State
 let state = { pharmacist: "", startTime: null, endTime: null, wardData: {} };
 let dashboardRawData = []; // เก็บข้อมูลประวัติ
 
-// Elements
+// Elements ต่างๆ
 const elDate = document.getElementById('currentDate');
 const elSelect = document.getElementById('pharmacistSelect');
+const dashSelectPhar = document.getElementById('dashFilterPharmacist');
 const btnStart = document.getElementById('startShiftBtn');
 const btnEnd = document.getElementById('endShiftBtn');
 const wardGrid = document.getElementById('wardGrid');
 
-function updateDateHeader() {
+// เริ่มต้นการทำงาน (แสดงวันที่ และ โหลดรายชื่อ)
+function init() {
     const options = { year: 'numeric', month: 'long', day: 'numeric', era: 'short' };
     elDate.innerText = new Date().toLocaleDateString('th-TH', options).replace('พ.ศ.', 'พ.ศ. ');
-}
 
-function loadPharmacists() {
+    // ใส่ชื่อลงใน Dropdown หน้าเริ่มงาน และ หน้า Dashboard
     pharmacists.forEach(name => {
-        const option = document.createElement('option');
-        option.value = name; option.innerText = name;
-        elSelect.appendChild(option);
+        elSelect.add(new Option(name, name));
+        dashSelectPhar.add(new Option(name, name));
     });
+
+    loadState();
 }
 
 function saveState() { localStorage.setItem('shiftState', JSON.stringify(state)); }
+
 function loadState() {
     const saved = localStorage.getItem('shiftState');
     if (saved) {
         state = JSON.parse(saved);
-        if (state.pharmacist && state.startTime && !state.endTime) { renderWorkUI(); }
+        if (state.pharmacist && state.startTime && !state.endTime) { 
+            renderWorkUI(); 
+        }
     }
 }
 
@@ -60,13 +67,15 @@ function renderWards() {
         card.className = 'ward-card';
         if (state.wardData[ward]) card.classList.add('completed');
 
-        const title = document.createElement('h3'); title.innerText = ward;
+        const title = document.createElement('h3'); 
+        title.innerText = ward;
+        
         const timeStr = document.createElement('div');
         timeStr.className = 'time-stamp';
-        // *** จุดที่แก้ไข: ไม่โชว์เวลาแล้ว โชว์แค่สถานะ ***
         timeStr.innerText = state.wardData[ward] ? `✔️ รับยาเรียบร้อย` : 'ยังไม่รับยา';
 
-        card.appendChild(title); card.appendChild(timeStr);
+        card.appendChild(title); 
+        card.appendChild(timeStr);
 
         card.addEventListener('click', () => {
             if (!state.endTime) {
@@ -75,7 +84,8 @@ function renderWards() {
                 } else {
                     delete state.wardData[ward];
                 }
-                saveState(); renderWards();
+                saveState(); 
+                renderWards();
             }
         });
         wardGrid.appendChild(card);
@@ -86,7 +96,10 @@ function renderWorkUI() {
     document.getElementById('setupSection').classList.add('hidden');
     document.getElementById('workSection').classList.remove('hidden');
     document.getElementById('pharmacistBadge').classList.remove('hidden');
-    document.getElementById('badgeName').innerText = `ภก.เวร: ${state.pharmacist}`;
+    
+    // ดึงเฉพาะชื่อแรกมาโชว์ที่ป้าย จะได้ไม่ยาวเกินไป
+    let shortName = state.pharmacist.split(' ')[0] || state.pharmacist;
+    document.getElementById('badgeName').innerText = `ผู้ปฏิบัติงาน: ${shortName}`; 
     renderWards();
 }
 
@@ -94,9 +107,10 @@ btnStart.addEventListener('click', () => {
     if (!elSelect.value) return alert("กรุณาเลือกชื่อเภสัชกรก่อนเริ่มงานครับ");
     state.pharmacist = elSelect.value;
     state.startTime = new Date().toISOString();
-    state.endTime = null; // Fix บัคเวลาเก่า
+    state.endTime = null; 
     state.wardData = {};
-    saveState(); renderWorkUI();
+    saveState(); 
+    renderWorkUI();
 });
 
 btnEnd.addEventListener('click', async () => {
@@ -106,13 +120,13 @@ btnEnd.addEventListener('click', async () => {
         
         const syncStatus = document.getElementById('syncStatus');
         syncStatus.innerText = "⏳ กำลังบันทึกข้อมูลลงระบบ...";
-        syncStatus.style.color = "blue";
+        syncStatus.style.color = "var(--primary-color)";
 
         const payload = {
             date: new Date().toLocaleDateString('th-TH'),
             pharmacist: state.pharmacist,
-            startTime: new Date(state.startTime).toLocaleTimeString('th-TH'),
-            endTime: new Date(state.endTime).toLocaleTimeString('th-TH'),
+            startTime: new Date(state.startTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+            endTime: new Date(state.endTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
             wardData: JSON.stringify(state.wardData)
         };
 
@@ -123,15 +137,15 @@ btnEnd.addEventListener('click', async () => {
                 body: JSON.stringify(payload)
             });
             syncStatus.innerText = "✅ บันทึกข้อมูลสำเร็จ! กำลังรีเซ็ต...";
-            syncStatus.style.color = "green";
+            syncStatus.style.color = "var(--success-color)";
             
             setTimeout(() => {
-                localStorage.removeItem('shiftState'); // Fix บัคแคช
-                location.reload(); // รีเฟรชหน้าเตรียมรับเวรใหม่
+                localStorage.removeItem('shiftState'); 
+                location.reload(); 
             }, 2000);
         } catch (error) {
             syncStatus.innerText = "❌ บันทึกไม่สำเร็จ โปรดลองใหม่";
-            syncStatus.style.color = "red";
+            syncStatus.style.color = "var(--danger-color)";
         }
     }
 });
@@ -160,137 +174,157 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     
     const loginStatus = document.getElementById('loginStatus');
     loginStatus.innerText = "กำลังตรวจสอบและดึงข้อมูล...";
-    loginStatus.style.color = "blue";
+    loginStatus.style.color = "var(--primary-color)";
 
     try {
-        // ดึงข้อมูลแบบ GET พร้อมแนบรหัสผ่าน
         const response = await fetch(`${GOOGLE_SHEET_WEB_APP_URL}?action=login&pass=${encodeURIComponent(pass)}`);
         const result = await response.json();
 
         if(result.status === "success") {
-            dashboardRawData = result.data; // เก็บประวัติทั้งหมด
+            dashboardRawData = result.data; 
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('dashboardSection').classList.remove('hidden');
             document.getElementById('adminPass').value = '';
             
-            // อัปเดตข้อมูลเวรปัจจุบัน
-            document.getElementById('dashPharmacist').innerText = state.pharmacist || "-";
-            document.getElementById('dashStartTime').innerText = state.startTime ? new Date(state.startTime).toLocaleTimeString('th-TH') : "-";
-            document.getElementById('dashEndTime').innerText = state.endTime ? new Date(state.endTime).toLocaleTimeString('th-TH') : (state.startTime ? "กำลังปฏิบัติงาน" : "-");
-
-            calculateDashboardStats(); // คำนวณอันดับ
+            calculateDashboardStats(); 
         } else {
             loginStatus.innerText = "❌ " + result.message;
-            loginStatus.style.color = "red";
+            loginStatus.style.color = "var(--danger-color)";
         }
     } catch(err) {
-        loginStatus.innerText = "❌ เกิดข้อผิดพลาดในการเชื่อมต่อ";
-        loginStatus.style.color = "red";
+        loginStatus.innerText = "❌ เกิดข้อผิดพลาดในการเชื่อมต่อ (อย่าลืม Deploy เป็น New Version นะครับ)";
+        loginStatus.style.color = "var(--danger-color)";
     }
 });
 
-// ดัก Event เปลี่ยน Filter
-document.getElementById('filterTime').addEventListener('change', calculateDashboardStats);
-document.getElementById('filterDay').addEventListener('change', calculateDashboardStats);
+// Event เปลี่ยน Filter ในหน้า Dashboard
+document.getElementById('dashFilterTime').addEventListener('change', calculateDashboardStats);
+document.getElementById('dashFilterPharmacist').addEventListener('change', calculateDashboardStats);
 
-// ฟังก์ชันคำนวณและจัดอันดับ
+// ฟังก์ชันคำนวณระยะเวลา (นาที) ข้ามคืนได้
+function getDurationMins(startStr, endStr) {
+    if(!startStr || !endStr || startStr === '-' || endStr === '-') return 0;
+    try {
+        let [sh, sm] = startStr.split(':').map(Number);
+        let [eh, em] = endStr.split(':').map(Number);
+        let diff = (eh * 60 + em) - (sh * 60 + sm);
+        if (diff < 0) diff += 24 * 60; // กรณีเข้าเวรข้ามคืน
+        return diff;
+    } catch(e) { return 0; }
+}
+
 function calculateDashboardStats() {
-    const timeFilter = document.getElementById('filterTime').value;
-    const dayFilter = document.getElementById('filterDay').value;
+    const daysLimit = parseInt(document.getElementById('dashFilterTime').value);
+    const pharFilter = document.getElementById('dashFilterPharmacist').value;
     
-    // ข้ามแถวแรก (Header)
-    let filteredData = dashboardRawData.slice(1);
-    
-    // 1. กรองตามเวลา (30 วัน, 1 ปี) และ วันหยุด/ธรรมดา
+    let filteredData = dashboardRawData.slice(1); // ข้ามแถว Header
     const now = new Date();
+    
+    // 1. กรองตามวันที่ และ ชื่อเภสัช
     filteredData = filteredData.filter(row => {
         if(!row[0]) return false;
-        
-        // แยกส่วนวันที่ภาษาไทย (รูปแบบที่ถูกเซฟคือ ว/ด/ป เช่น 30/3/2569)
-        // หมายเหตุ: โค้ดนี้ประเมินวันที่คร่าวๆ จากข้อมูลที่บันทึก
-        // สร้างระบบ Date เพื่อเช็ควันหยุด
+        if(pharFilter !== 'all' && row[1] !== pharFilter) return false;
+
         const dateParts = row[0].split('/'); 
-        let rowDate = new Date();
         if(dateParts.length === 3) {
-            // แปลง พ.ศ. เป็น ค.ศ. (ลบ 543)
-            rowDate = new Date(dateParts[2]-543, dateParts[1]-1, dateParts[0]);
+            let rowDate = new Date(dateParts[2]-543, dateParts[1]-1, dateParts[0]);
+            const diffDays = (now - rowDate) / (1000 * 60 * 60 * 24);
+            if(diffDays > daysLimit) return false;
         }
-        
-        // กรองระยะเวลา
-        const diffDays = (now - rowDate) / (1000 * 60 * 60 * 24);
-        if(timeFilter === "30days" && diffDays > 30) return false;
-        if(timeFilter === "1year" && diffDays > 365) return false;
-
-        // กรองวันหยุด
-        const dayOfWeek = rowDate.getDay(); // 0=Sun, 6=Sat
-        if(dayFilter === "weekend" && (dayOfWeek !== 0 && dayOfWeek !== 6)) return false;
-        if(dayFilter === "weekday" && (dayOfWeek === 0 || dayOfWeek === 6)) return false;
-
         return true;
     });
 
-    document.getElementById('statTotalShifts').innerText = filteredData.length;
-
-    // 2. คำนวณหาว่าวอร์ดไหนมารับไว/ช้า (วัดจาก ระยะเวลาตั้งแต่เริ่มเวร จนถึงเวลารับยา)
-    let wardStats = {};
-    wards.forEach(w => wardStats[w] = { totalMins: 0, count: 0 });
-
-    filteredData.forEach(row => {
-        const startTimeStr = row[2]; // เวลาเริ่ม เช่น "20:00:00"
-        const wardJsonStr = row[4]; // JSON string
-        if(startTimeStr && wardJsonStr) {
-            try {
-                const wardData = JSON.parse(wardJsonStr);
-                // ดึงชั่วโมงและนาที ของเวลาเริ่ม
-                let [startH, startM] = startTimeStr.split(':');
-                let startMinutes = (parseInt(startH) * 60) + parseInt(startM);
-
-                for(let ward in wardData) {
-                    if(wardStats[ward]) {
-                        let [wH, wM] = wardData[ward].split(':');
-                        let wardMinutes = (parseInt(wH) * 60) + parseInt(wM);
-                        
-                        // ป้องกันกรณีข้ามคืน (เช่น เริ่ม 22:00 รับยา 02:00)
-                        if (wardMinutes < startMinutes) wardMinutes += (24 * 60);
-                        
-                        wardStats[ward].totalMins += (wardMinutes - startMinutes);
-                        wardStats[ward].count += 1;
-                    }
-                }
-            } catch(e) {}
-        }
-    });
-
-    // 3. จัดอันดับ
-    let ranking = [];
-    for(let w in wardStats) {
-        if(wardStats[w].count > 0) {
-            let avg = wardStats[w].totalMins / wardStats[w].count;
-            ranking.push({ ward: w, avgMins: Math.round(avg) });
-        }
-    }
+    const personalSec = document.getElementById('personalStatsSection');
+    const wardSec = document.getElementById('wardStatsSection');
     
-    // เรียงจากน้อยไปมาก (รับยาไวสุด -> ช้าสุด)
-    ranking.sort((a, b) => a.avgMins - b.avgMins);
+    if(pharFilter === 'all') {
+        // ---- โหมดดูภาพรวม (จัดอันดับวอร์ด) ----
+        personalSec.classList.add('hidden');
+        wardSec.classList.remove('hidden');
 
-    // แสดงผล
-    const fastList = document.getElementById('fastestWardsList');
-    const slowList = document.getElementById('slowestWardsList');
-    fastList.innerHTML = ''; slowList.innerHTML = '';
+        let wardStats = {};
+        wards.forEach(w => wardStats[w] = { totalMins: 0, count: 0 });
 
-    if(ranking.length === 0) {
-        fastList.innerHTML = '<li>ไม่มีข้อมูลในระบบ</li>';
-        slowList.innerHTML = '<li>ไม่มีข้อมูลในระบบ</li>';
+        filteredData.forEach(row => {
+            const startTimeStr = row[2];
+            const wardJsonStr = row[4];
+            if(startTimeStr && wardJsonStr) {
+                try {
+                    const wardData = JSON.parse(wardJsonStr);
+                    let [sh, sm] = startTimeStr.split(':').map(Number);
+                    let startMins = sh * 60 + sm;
+
+                    for(let w in wardData) {
+                        if(wardStats[w]) {
+                            let [wh, wm] = wardData[w].split(':').map(Number);
+                            let wardMins = wh * 60 + wm;
+                            if (wardMins < startMins) wardMins += (24 * 60);
+                            wardStats[w].totalMins += (wardMins - startMins);
+                            wardStats[w].count += 1;
+                        }
+                    }
+                } catch(e) {}
+            }
+        });
+
+        let ranking = [];
+        for(let w in wardStats) {
+            if(wardStats[w].count > 0) {
+                ranking.push({ ward: w, avgMins: Math.round(wardStats[w].totalMins / wardStats[w].count) });
+            }
+        }
+        ranking.sort((a, b) => a.avgMins - b.avgMins);
+
+        const fastList = document.getElementById('fastestWardsList');
+        const slowList = document.getElementById('slowestWardsList');
+        fastList.innerHTML = ''; slowList.innerHTML = '';
+
+        if(ranking.length === 0) {
+            fastList.innerHTML = '<li>ไม่มีข้อมูล</li>'; slowList.innerHTML = '<li>ไม่มีข้อมูล</li>';
+        } else {
+            ranking.slice(0, 3).forEach(r => fastList.innerHTML += `<li><strong>${r.ward}</strong> <span class="history-time">(${r.avgMins} นาที)</span></li>`);
+            ranking.slice(-3).reverse().forEach(r => slowList.innerHTML += `<li><strong>${r.ward}</strong> <span class="history-time">(${r.avgMins} นาที)</span></li>`);
+        }
+
     } else {
-        // ไวสุด 3 อันดับ
-        ranking.slice(0, 3).forEach(r => {
-            fastList.innerHTML += `<li><strong>${r.ward}</strong> (เฉลี่ย ${r.avgMins} นาทีหลังเริ่มเวร)</li>`;
+        // ---- โหมดดูรายบุคคล ----
+        personalSec.classList.remove('hidden');
+        wardSec.classList.add('hidden');
+        
+        document.getElementById('statTotalShifts').innerText = filteredData.length;
+        
+        let totalMins = 0;
+        let historyHTML = '';
+        
+        // ประวัติเรียงจากใหม่สุดไปเก่าสุด
+        filteredData.reverse().forEach(row => {
+            const dateStr = row[0];
+            const start = row[2] ? row[2].slice(0,5) : '-'; // ตัดเอาแค่ ชั่วโมง:นาที
+            const end = row[3] ? row[3].slice(0,5) : '-';
+            
+            let mins = getDurationMins(row[2], row[3]);
+            totalMins += mins;
+
+            historyHTML += `
+                <div class="history-item">
+                    <span class="history-date">📅 ${dateStr}</span>
+                    <span class="history-time">⏱️ ${start} - ${end}</span>
+                </div>
+            `;
         });
-        // ช้าสุด 3 อันดับ (เรียงกลับด้าน)
-        ranking.slice(-3).reverse().forEach(r => {
-            slowList.innerHTML += `<li><strong>${r.ward}</strong> (เฉลี่ย ${r.avgMins} นาทีหลังเริ่มเวร)</li>`;
-        });
+        
+        document.getElementById('shiftHistoryList').innerHTML = historyHTML || '<p class="text-center">ไม่มีข้อมูลในระบบ</p>';
+        
+        if(filteredData.length > 0) {
+            let avgMins = Math.round(totalMins / filteredData.length);
+            let h = Math.floor(avgMins / 60);
+            let m = avgMins % 60;
+            document.getElementById('statAvgDuration').innerText = `${h} ชม. ${m} นาที`;
+        } else {
+            document.getElementById('statAvgDuration').innerText = "0 ชม. 0 นาที";
+        }
     }
 }
 
-updateDateHeader(); loadPharmacists(); loadState();
+// เรียกฟังก์ชันเมื่อเปิดหน้าเว็บ
+init();
