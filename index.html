@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบเช็คชื่อรับยาประจำวัน</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1 id="currentDate">กำลังโหลดวันที่...</h1>
+    </header>
+
+    <main>
+        <section id="setupSection" class="card">
+            <h2>เลือกเภสัชกรผู้ปฏิบัติงาน</h2>
+            <select id="pharmacistSelect">
+                <option value="">-- กรุณาเลือกชื่อ --</option>
+                </select>
+            <button id="startShiftBtn" class="btn primary">เริ่มการทำงาน</button>
+        </section>
+
+        <section id="workSection" class="hidden">
+            <div class="action-bar">
+                <button id="endShiftBtn" class="btn danger">จบการทำงาน</button>
+                <button id="toggleDashboardBtn" class="btn secondary">ดู Dashboard</button>
+            </div>
+
+            <h2>รายชื่อหอผู้ป่วยรับยา</h2>
+            <div id="wardGrid" class="ward-grid">
+                </div>
+        </section>
+
+        <section id="dashboardSection" class="hidden card">
+            <h2>สรุปข้อมูล (Dashboard)</h2>
+            <div class="stats-container">
+                <p><strong>ผู้ปฏิบัติงาน:</strong> <span id="dashPharmacist">-</span></p>
+                <p><strong>เวลาเริ่มงาน:</strong> <span id="dashStartTime">-</span></p>
+                <p><strong>เวลาสิ้นสุด:</strong> <span id="dashEndTime">-</span></p>
+                <p><strong>ระยะเวลารวม:</strong> <span id="dashTotalTime">-</span></p>
+            </div>
+            <button id="syncDataBtn" class="btn success">บันทึกข้อมูลลง Google Sheets</button>
+            <p id="syncStatus" class="status-text"></p>
+        </section>
+    </main>
+
+    <div id="pharmacistBadge" class="badge hidden">
+        <span id="badgeName"></span>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
