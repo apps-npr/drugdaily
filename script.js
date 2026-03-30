@@ -1,5 +1,5 @@
 // URL ของ Google Apps Script Web App (ต้องเอา URL ที่ Deploy แล้วมาใส่ตรงนี้)
-const GOOGLE_SHEET_WEB_APP_URL = "YOUR_WEB_APP_URL_HERE";
+const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzgpd3F4STzP210MfJcsQRHwZnLRLjp82w3sD7Efu2mNnyZ6h8dVE96j8TLGcp6YoDfMg/exec";
 
 // ข้อมูลตั้งต้น
 const wards = [
