@@ -1,5 +1,4 @@
-// เปลี่ยน URL กลับเป็นของ Google Script ของคุณด้วยนะครับ
-const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzgpd3F4STzP210MfJcsQRHwZnLRLjp82w3sD7Efu2mNnyZ6h8dVE96j8TLGcp6YoDfMg/exec"; 
+const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzgpd3F4STzP210MfJcsQRHwZnLRLjp82w3sD7Efu2mNnyZ6h8dVE96j8TLGcp6YoDfMg/exec"; // <--- ใส่ URL ของคุณตรงนี้
 
 const wards = [ "MICU", "Med พิเศษเดี่ยวชั้น 14", "Med พิเศษรวมชั้น 12", "Med ส.ชาย ชั้น 11", "SEMI ชาย ชั้น 11", "SEMI หญิง ชั้น 10", "Stroke unit ชั้น 10", "อายุรกรรม หญิง ชั้น 10", "OBS ER", "ER med ชั้น 8", "AIIR" ];
 
@@ -7,6 +6,8 @@ const pharmacists = [ "ภญ.เสาวภา ศิริกาญจน์ 
 
 let state = { pharmacist: "", startTime: null, endTime: null, wardData: {} };
 let dashboardRawData = []; 
+let trendChartInstance = null;
+let peakHourChartInstance = null;
 
 const elDate = document.getElementById('currentDate');
 const elSelect = document.getElementById('pharmacistSelect');
@@ -18,11 +19,7 @@ const wardGrid = document.getElementById('wardGrid');
 function init() {
     const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', era: 'short' }).replace('พ.ศ.', 'พ.ศ. ');
     elDate.innerText = dateStr;
-
-    pharmacists.forEach(name => {
-        elSelect.add(new Option(name, name));
-        dashSelectPhar.add(new Option(name, name));
-    });
+    pharmacists.forEach(name => { elSelect.add(new Option(name, name)); dashSelectPhar.add(new Option(name, name)); });
 
     const saved = localStorage.getItem('shiftState');
     if (saved) {
@@ -43,7 +40,9 @@ function renderWards() {
         const title = document.createElement('h3'); title.innerText = ward;
         const timeStr = document.createElement('div');
         timeStr.className = 'time-stamp';
-        timeStr.innerText = state.wardData[ward] ? `✔️ รับยาแล้ว` : 'รอรับยา';
+        // ตัดวินาทีทิ้ง โชว์แค่ HH:mm
+        let displayTime = state.wardData[ward] ? state.wardData[ward].match(/(\d+:\d+)/)?.[1] || "รับแล้ว" : "รอรับยา";
+        timeStr.innerText = state.wardData[ward] ? `✔️ ${displayTime}` : 'รอรับยา';
 
         card.appendChild(title); card.appendChild(timeStr);
 
@@ -72,7 +71,7 @@ function renderWorkUI() {
 btnStart.addEventListener('click', () => {
     if (!elSelect.value) return alert("กรุณาเลือกชื่อเภสัชกรครับ");
     state.pharmacist = elSelect.value;
-    state.startTime = new Date().toISOString();
+    state.startTime = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
     state.endTime = null; 
     state.wardData = {};
     saveState(); renderWorkUI();
@@ -80,7 +79,7 @@ btnStart.addEventListener('click', () => {
 
 btnEnd.addEventListener('click', async () => {
     if(confirm("ยืนยันจบเวรและบันทึกข้อมูล?")) {
-        state.endTime = new Date().toISOString();
+        state.endTime = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
         saveState();
         
         const syncStatus = document.getElementById('syncStatus');
@@ -89,8 +88,8 @@ btnEnd.addEventListener('click', async () => {
         const payload = {
             date: new Date().toLocaleDateString('th-TH'),
             pharmacist: state.pharmacist,
-            startTime: new Date(state.startTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
-            endTime: new Date(state.endTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+            startTime: state.startTime,
+            endTime: state.endTime,
             wardData: JSON.stringify(state.wardData)
         };
 
@@ -98,187 +97,243 @@ btnEnd.addEventListener('click', async () => {
             await fetch(GOOGLE_SHEET_WEB_APP_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             syncStatus.innerText = "✅ บันทึกสำเร็จ!";
             setTimeout(() => { localStorage.removeItem('shiftState'); location.reload(); }, 2000);
-        } catch (error) {
-            syncStatus.innerText = "❌ บันทึกไม่สำเร็จ โปรดลองใหม่";
-        }
+        } catch (error) { syncStatus.innerText = "❌ บันทึกไม่สำเร็จ โปรดลองใหม่"; }
     }
 });
 
-/* ================= Dashboard Admin & Stats ================= */
-document.getElementById('showLoginBtn').addEventListener('click', () => {
-    document.getElementById('setupSection').classList.add('hidden');
-    document.getElementById('loginSection').classList.remove('hidden');
-});
-document.getElementById('cancelLoginBtn').addEventListener('click', () => {
-    document.getElementById('loginSection').classList.add('hidden');
-    document.getElementById('setupSection').classList.remove('hidden');
-});
-document.getElementById('closeDashBtn').addEventListener('click', () => {
-    document.getElementById('dashboardSection').classList.add('hidden');
-    document.getElementById('setupSection').classList.remove('hidden');
+/* ================= Dashboard Admin & Data Processing ================= */
+['showLoginBtn', 'cancelLoginBtn', 'closeDashBtn'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', (e) => {
+        const isLogin = e.target.id === 'showLoginBtn';
+        const isCancel = e.target.id === 'cancelLoginBtn';
+        const isClose = e.target.id === 'closeDashBtn';
+        
+        if (isLogin) {
+            document.getElementById('setupSection').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+        } else if (isCancel || isClose) {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('setupSection').classList.remove('hidden');
+        }
+    });
 });
 
 document.getElementById('loginBtn').addEventListener('click', async () => {
     const pass = document.getElementById('adminPass').value;
     if(!pass) return alert("กรุณาใส่รหัสผ่าน");
     const loginStatus = document.getElementById('loginStatus');
-    loginStatus.innerText = "⏳ กำลังดึงข้อมูล...";
-    loginStatus.style.color = "white";
+    loginStatus.innerText = "⏳ กำลังดึงข้อมูล..."; loginStatus.style.color = "white";
     
     try {
         const response = await fetch(`${GOOGLE_SHEET_WEB_APP_URL}?action=login&pass=${encodeURIComponent(pass)}`);
         const result = await response.json();
-
         if(result.status === "success") {
             dashboardRawData = result.data;
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('dashboardSection').classList.remove('hidden');
             document.getElementById('adminPass').value = '';
             calculateDashboardStats();
-        } else {
-            loginStatus.innerText = "❌ รหัสผ่านไม่ถูกต้อง";
-        }
-    } catch(err) {
-        loginStatus.innerText = "❌ เชื่อมต่อล้มเหลว";
-    }
+        } else { loginStatus.innerText = "❌ รหัสผ่านไม่ถูกต้อง"; }
+    } catch(err) { loginStatus.innerText = "❌ เชื่อมต่อล้มเหลว"; }
 });
 
 document.getElementById('dashFilterTime').addEventListener('change', calculateDashboardStats);
 document.getElementById('dashFilterPharmacist').addEventListener('change', calculateDashboardStats);
 
-// *** แก้ไขฟังก์ชันคำนวณเวลา (แก้บัค NaN) ***
+// Helper: คำนวณนาทีจาก "HH:mm" (กันข้ามคืน และ ดัก Error)
 function getDurationMins(startStr, endStr) {
     if(!startStr || !endStr || startStr === '-' || endStr === '-') return 0;
     try {
-        // ใช้ Regex ดึงเฉพาะตัวเลข 2 ชุดแรกที่คั่นด้วย : เพื่อทิ้งคำว่า " น." ที่ชอบแถมมา
-        const sMatch = startStr.match(/(\d+):(\d+)/);
-        const eMatch = endStr.match(/(\d+):(\d+)/);
-        
+        let sMatch = startStr.toString().match(/(\d+):(\d+)/);
+        let eMatch = endStr.toString().match(/(\d+):(\d+)/);
         if(!sMatch || !eMatch) return 0;
-
-        let sh = parseInt(sMatch[1], 10);
-        let sm = parseInt(sMatch[2], 10);
-        let eh = parseInt(eMatch[1], 10);
-        let em = parseInt(eMatch[2], 10);
-
-        let diff = (eh * 60 + em) - (sh * 60 + sm);
-        if (diff < 0) diff += 24 * 60; // กรณีข้ามคืน
+        let diff = (parseInt(eMatch[1], 10)*60 + parseInt(eMatch[2], 10)) - (parseInt(sMatch[1], 10)*60 + parseInt(sMatch[2], 10));
+        if (diff < 0) diff += 24 * 60; // ข้ามเที่ยงคืน
         return diff;
     } catch(e) { return 0; }
+}
+
+// ตั้งค่าฟอนต์และสีกราฟ Chart.js 
+Chart.defaults.color = '#064e3b';
+Chart.defaults.font.family = "'Kanit', sans-serif";
+
+function renderCharts(trendData, peakData) {
+    if(trendChartInstance) trendChartInstance.destroy();
+    if(peakHourChartInstance) peakHourChartInstance.destroy();
+
+    const ctxTrend = document.getElementById('trendChart')?.getContext('2d');
+    if(ctxTrend) {
+        trendChartInstance = new Chart(ctxTrend, {
+            type: 'line',
+            data: {
+                labels: trendData.labels,
+                datasets: [{
+                    label: 'เวลาเฉลี่ย (นาที)',
+                    data: trendData.values,
+                    borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                    borderWidth: 2, fill: true, tension: 0.3
+                }]
+            },
+            options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        });
+    }
+
+    const ctxPeak = document.getElementById('peakHourChart')?.getContext('2d');
+    if(ctxPeak) {
+        peakHourChartInstance = new Chart(ctxPeak, {
+            type: 'bar',
+            data: {
+                labels: peakData.labels, // ชั่วโมง
+                datasets: [{
+                    label: 'จำนวนครั้งที่มารับยา',
+                    data: peakData.values,
+                    backgroundColor: 'rgba(5, 117, 230, 0.6)',
+                    borderRadius: 5
+                }]
+            },
+            options: { maintainAspectRatio: false }
+        });
+    }
 }
 
 function calculateDashboardStats() {
     const daysLimit = parseInt(document.getElementById('dashFilterTime').value);
     const pharFilter = document.getElementById('dashFilterPharmacist').value;
-    
-    let filteredData = dashboardRawData.slice(1);
+    let filteredData = dashboardRawData.slice(1); // ข้าม Header
     const now = new Date();
     
+    // 1. กรองข้อมูล
     filteredData = filteredData.filter(row => {
         if(!row[0]) return false;
         if(pharFilter !== 'all' && row[1] !== pharFilter) return false;
-
-        const dateParts = row[0].split('/'); 
+        const dateParts = row[0].toString().split('/'); 
         if(dateParts.length === 3) {
             let rowDate = new Date(dateParts[2]-543, dateParts[1]-1, dateParts[0]);
-            const diffDays = (now - rowDate) / (1000 * 60 * 60 * 24);
-            if(diffDays > daysLimit) return false;
+            if((now - rowDate) / (1000 * 60 * 60 * 24) > daysLimit) return false;
         }
         return true;
     });
 
-    const personalSec = document.getElementById('personalStatsSection');
-    const wardSec = document.getElementById('wardStatsSection');
+    // 2. คำนวณภาพรวม (KPI)
+    let totalShiftMins = 0;
+    let pharStats = {}; // สำหรับ Leaderboard
+    let wardStats = {}; // สำหรับเวลาวอร์ด
+    wards.forEach(w => wardStats[w] = { totalMins: 0, count: 0 });
     
-    if(pharFilter === 'all') {
-        personalSec.classList.add('hidden');
-        wardSec.classList.remove('hidden');
-    } else {
-        personalSec.classList.remove('hidden');
-        wardSec.classList.add('hidden');
-        
-        document.getElementById('statTotalShifts').innerText = filteredData.length;
-        
-        let totalMins = 0;
-        let historyHTML = '';
-        
-        filteredData.reverse().forEach(row => {
-            const dateStr = row[0];
-            // ดึงแค่ 5 ตัวอักษรแรก (HH:mm) เพื่อความสวยงาม
-            const start = row[2] ? row[2].match(/(\d+:\d+)/)?.[1] || '-' : '-'; 
-            const end = row[3] ? row[3].match(/(\d+:\d+)/)?.[1] || '-' : '-';
-            
-            let mins = getDurationMins(row[2], row[3]);
-            totalMins += mins;
+    let trendMap = {}; // สำหรับกราฟเส้น
+    let peakHours = Array(24).fill(0); // สำหรับกราฟแท่ง (0-23 น.)
+    let historyHTML = '';
 
-            historyHTML += `
-                <div class="history-item">
-                    <span>📅 ${dateStr}</span>
-                    <span style="color:#059669;">⏱️ ${start} - ${end}</span>
-                </div>
-            `;
-        });
+    filteredData.forEach(row => {
+        let dateStr = row[0]; let phar = row[1]; let start = row[2]; let end = row[3]; let wJson = row[4];
         
-        document.getElementById('shiftHistoryList').innerHTML = historyHTML || '<p class="text-center">ไม่มีข้อมูลในระบบ</p>';
-        
-        if(filteredData.length > 0) {
-            let avgMins = Math.round(totalMins / filteredData.length);
-            let h = Math.floor(avgMins / 60);
-            let m = avgMins % 60;
-            document.getElementById('statAvgDuration').innerText = `${h} ชม. ${m} นาที`;
-        } else {
-            document.getElementById('statAvgDuration').innerText = "0 ชม. 0 นาที";
+        let shiftMins = getDurationMins(start, end);
+        totalShiftMins += shiftMins;
+
+        if(!pharStats[phar]) pharStats[phar] = { shifts: 0, totalMins: 0 };
+        pharStats[phar].shifts += 1;
+        pharStats[phar].totalMins += shiftMins;
+
+        if(pharFilter !== 'all') {
+            historyHTML = `<div class="history-item"><span>📅 ${dateStr}</span><span style="color:#059669;">⏱️ ${start.toString().match(/(\d+:\d+)/)?.[1] || ''} - ${end.toString().match(/(\d+:\d+)/)?.[1] || ''}</span></div>` + historyHTML;
         }
-    }
 
-    if(pharFilter === 'all') {
-        let wardStats = {};
-        wards.forEach(w => wardStats[w] = { totalMins: 0, count: 0 });
+        if(start && wJson) {
+            try {
+                const wardData = JSON.parse(wJson);
+                let sMatch = start.toString().match(/(\d+):(\d+)/);
+                if(sMatch) {
+                    let startMinsRaw = parseInt(sMatch[1],10) * 60 + parseInt(sMatch[2],10);
+                    let dailyTotalWardMins = 0; let wardCountInShift = 0;
 
-        filteredData.forEach(row => {
-            const startTimeStr = row[2];
-            const wardJsonStr = row[4];
-            if(startTimeStr && wardJsonStr) {
-                try {
-                    const wardData = JSON.parse(wardJsonStr);
-                    const sMatch = startTimeStr.match(/(\d+):(\d+)/);
-                    if(sMatch) {
-                        let startMins = parseInt(sMatch[1],10) * 60 + parseInt(sMatch[2],10);
+                    for(let w in wardData) {
+                        let wMatch = wardData[w].toString().match(/(\d+):(\d+)/);
+                        if(wMatch) {
+                            let wh = parseInt(wMatch[1],10);
+                            let wm = parseInt(wMatch[2],10);
+                            
+                            peakHours[wh] += 1; // เก็บชั่วโมงที่มารับยา
 
-                        for(let w in wardData) {
-                            if(wardStats[w]) {
-                                const wMatch = wardData[w].match(/(\d+):(\d+)/);
-                                if(wMatch) {
-                                    let wardMins = parseInt(wMatch[1],10) * 60 + parseInt(wMatch[2],10);
-                                    if (wardMins < startMins) wardMins += (24 * 60);
-                                    wardStats[w].totalMins += (wardMins - startMins);
-                                    wardStats[w].count += 1;
-                                }
-                            }
+                            let wardMinsRaw = wh * 60 + wm;
+                            if (wardMinsRaw < startMinsRaw) wardMinsRaw += (24 * 60);
+                            let duration = wardMinsRaw - startMinsRaw;
+
+                            if(wardStats[w]) { wardStats[w].totalMins += duration; wardStats[w].count += 1; }
+                            dailyTotalWardMins += duration; wardCountInShift += 1;
                         }
                     }
-                } catch(e) {}
-            }
-        });
-
-        let ranking = [];
-        for(let w in wardStats) {
-            if(wardStats[w].count > 0) {
-                ranking.push({ ward: w, avgMins: Math.round(wardStats[w].totalMins / wardStats[w].count) });
-            }
+                    
+                    if(wardCountInShift > 0) {
+                        let shortDate = dateStr.split('/').slice(0,2).join('/');
+                        if(!trendMap[shortDate]) trendMap[shortDate] = { total: 0, count: 0 };
+                        trendMap[shortDate].total += dailyTotalWardMins / wardCountInShift;
+                        trendMap[shortDate].count += 1;
+                    }
+                }
+            } catch(e) {}
         }
-        ranking.sort((a, b) => a.avgMins - b.avgMins);
+    });
 
-        const fastList = document.getElementById('fastestWardsList');
-        const slowList = document.getElementById('slowestWardsList');
-        fastList.innerHTML = ''; slowList.innerHTML = '';
+    // อัปเดตข้อมูลภาพรวม
+    document.getElementById('statTotalShifts').innerText = filteredData.length;
+    let avgTotal = filteredData.length > 0 ? Math.round(totalShiftMins / filteredData.length) : 0;
+    document.getElementById('statAvgDuration').innerText = `${Math.floor(avgTotal/60)} ชม. ${avgTotal%60} นาที`;
 
-        if(ranking.length === 0) {
-            fastList.innerHTML = '<li>ไม่มีข้อมูล</li>'; slowList.innerHTML = '<li>ไม่มีข้อมูล</li>';
-        } else {
-            ranking.slice(0, 3).forEach(r => fastList.innerHTML += `<li><strong>${r.ward}</strong> <span style="color:#059669;">(${r.avgMins} นาที)</span></li>`);
-            ranking.slice(-3).reverse().forEach(r => slowList.innerHTML += `<li><strong>${r.ward}</strong> <span style="color:#dc2626;">(${r.avgMins} นาที)</span></li>`);
-        }
+    const isAll = (pharFilter === 'all');
+    // ซ่อน/แสดง UI ตาม Filter
+    ['chartsSection', 'wardStatsSection', 'pharmacistLeaderboard'].forEach(id => {
+        if(document.getElementById(id)) document.getElementById(id).style.display = isAll ? 'block' : 'none';
+    });
+    if(document.getElementById('personalHistorySection')) {
+        document.getElementById('personalHistorySection').style.display = !isAll ? 'block' : 'none';
+    }
+
+    if(!isAll) {
+        document.getElementById('shiftHistoryList').innerHTML = historyHTML || '<p class="text-center">ไม่มีข้อมูล</p>';
+        return; 
+    }
+
+    // วาดกราฟ
+    let tLabels = Object.keys(trendMap).slice(-14); 
+    let tValues = tLabels.map(d => Math.round(trendMap[d].total / trendMap[d].count));
+    
+    let pLabels = []; let pValues = [];
+    peakHours.forEach((count, hr) => {
+        if(count > 0) { pLabels.push(`${hr}:00`); pValues.push(count); }
+    });
+
+    renderCharts({labels: tLabels, values: tValues}, {labels: pLabels, values: pValues});
+
+    // จัดอันดับ Ward (Top 5)
+    let ranking = [];
+    for(let w in wardStats) {
+        if(wardStats[w].count > 0) ranking.push({ ward: w, avgMins: Math.round(wardStats[w].totalMins / wardStats[w].count) });
+    }
+    ranking.sort((a, b) => a.avgMins - b.avgMins);
+    
+    if(document.getElementById('fastestWardsList')) {
+        document.getElementById('fastestWardsList').innerHTML = ranking.slice(0, 5).map(r => `<li><strong>${r.ward}</strong> <span style="color:#059669;">(${r.avgMins} นาที)</span></li>`).join('');
+    }
+    if(document.getElementById('slowestWardsList')) {
+        document.getElementById('slowestWardsList').innerHTML = ranking.slice(-5).reverse().map(r => `<li><strong>${r.ward}</strong> <span style="color:#dc2626;">(${r.avgMins} นาที)</span></li>`).join('');
+    }
+
+    // จัดอันดับ เภสัชกร (Leaderboard)
+    let pharRanking = [];
+    for(let p in pharStats) {
+        let avgM = Math.round(pharStats[p].totalMins / pharStats[p].shifts);
+        pharRanking.push({ name: p.split(' ')[0], shifts: pharStats[p].shifts, avgStr: `${Math.floor(avgM/60)}ช. ${avgM%60}น.` });
+    }
+    pharRanking.sort((a, b) => b.shifts - a.shifts); // เรียงตามจำนวนเวรที่เข้า
+
+    if(document.getElementById('leaderboardList')) {
+        document.getElementById('leaderboardList').innerHTML = pharRanking.map((p, index) => `
+            <li class="leaderboard-item">
+                <div><span class="rank-badge">${index+1}</span> <strong>${p.name}</strong></div>
+                <div class="leaderboard-stats">${p.shifts} เวร <br><small>(เฉลี่ย ${p.avgStr})</small></div>
+            </li>
+        `).join('');
     }
 }
 
