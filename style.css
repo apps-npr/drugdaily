@@ -93,7 +93,7 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
 
 .glass-btn {
     padding: 16px; font-size: 1.1rem; font-family: 'Kanit', sans-serif; font-weight: 600;
-    border: none; border-radius: 50px; /* ปุ่มโค้งมนแบบยาแคปซูล */
+    border: none; border-radius: 50px; 
     cursor: pointer; transition: all 0.3s ease;
     width: 100%;
 }
@@ -103,7 +103,7 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
 .glass-btn.outline { background: transparent; border: 2px solid white; color: white; }
 .small-btn { padding: 8px 20px; width: auto; font-size: 1rem; }
 
-/* Ward Grid - ปรับแต่งให้ตัวหนังสือใหญ่ชัดเจนมาก */
+/* Ward Grid */
 .ward-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
 
 .ward-card {
@@ -116,10 +116,9 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
 }
 .ward-card:active { transform: scale(0.95); }
 
-/* ขยายชื่อ Ward ให้ใหญ่และเด่นชัด */
 .ward-card h3 { 
     margin: 0 0 10px 0; 
-    font-size: 1.5rem; /* ตัวใหญ่มาก */
+    font-size: 1.5rem; 
     font-weight: 700; 
     color: var(--text-dark);
     line-height: 1.2;
@@ -133,7 +132,6 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
     padding: 4px 0;
 }
 
-/* สถานะรับยาแล้ว (เปลี่ยนเป็นสีขาวทึบให้ตัดกับพื้นหลัง) */
 .ward-card.completed {
     background: white;
     box-shadow: 0 8px 20px rgba(0,0,0,0.15);
@@ -176,14 +174,15 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
     z-index: 1000;
 }
 
-/* ส่วนของกราฟ (Chart.js) */
+/* -------------------------------------
+   ส่วนเสริมใหม่ สำหรับ กราฟ และ Leaderboard
+-------------------------------------- */
 .chart-container {
     position: relative;
     height: 250px; /* ความสูงของกราฟ */
     width: 100%;
 }
 
-/* ปรับแต่งรายชื่อ Leaderboard เภสัชกร */
 .leaderboard-item {
     display: flex;
     justify-content: space-between;
