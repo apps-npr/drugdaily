@@ -5,82 +5,99 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบเช็คชื่อรับยาประจำวัน</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header>
+    <header class="neo-header">
         <h1 id="currentDate">กำลังโหลดวันที่...</h1>
     </header>
 
     <main>
-        <section id="setupSection" class="card">
-            <h2>เลือกเภสัชกรผู้ปฏิบัติงาน</h2>
-            <select id="pharmacistSelect">
+        <section id="setupSection" class="neo-card text-center">
+            <h2 class="title-text">เลือกเภสัชกรผู้ปฏิบัติงาน</h2>
+            <select id="pharmacistSelect" class="neo-input">
                 <option value="">-- กรุณาเลือกชื่อ --</option>
             </select>
-            <button id="startShiftBtn" class="btn primary">เริ่มการทำงาน</button>
-            <button id="showLoginBtn" class="btn secondary" style="margin-top: 10px;">ดูสถิติ (Admin)</button>
+            <div class="btn-group">
+                <button id="startShiftBtn" class="neo-btn primary">เริ่มการทำงาน</button>
+                <button id="showLoginBtn" class="neo-btn">สถิติ (Admin)</button>
+            </div>
         </section>
 
         <section id="workSection" class="hidden">
-            <div class="action-bar">
-                <button id="endShiftBtn" class="btn danger">จบการทำงานและบันทึก</button>
+            <div class="action-bar neo-card">
+                <button id="endShiftBtn" class="neo-btn danger">จบการทำงานและบันทึก</button>
             </div>
-            <h2>รายชื่อหอผู้ป่วยรับยา</h2>
-            <div id="wardGrid" class="ward-grid"></div>
+            
+            <div class="neo-card">
+                <h2 class="title-text text-center">รายชื่อหอผู้ป่วยรับยา</h2>
+                <div id="wardGrid" class="ward-grid"></div>
+            </div>
             <p id="syncStatus" class="status-text"></p>
         </section>
 
-        <section id="loginSection" class="hidden card">
-            <h2>เข้าสู่ระบบ Admin</h2>
-            <input type="password" id="adminPass" placeholder="ใส่รหัสผ่านจาก Google Sheets" style="width:100%; padding:10px; margin-bottom:10px;">
-            <button id="loginBtn" class="btn primary">เข้าสู่ระบบ</button>
-            <button id="cancelLoginBtn" class="btn danger">ยกเลิก</button>
+        <section id="loginSection" class="hidden neo-card text-center">
+            <h2 class="title-text">เข้าสู่ระบบ Admin</h2>
+            <input type="password" id="adminPass" class="neo-input" placeholder="ใส่รหัสผ่าน">
+            <div class="btn-group">
+                <button id="loginBtn" class="neo-btn primary">เข้าสู่ระบบ</button>
+                <button id="cancelLoginBtn" class="neo-btn">ยกเลิก</button>
+            </div>
             <p id="loginStatus" class="status-text"></p>
         </section>
 
-        <section id="dashboardSection" class="hidden card full-width">
-            <div class="dash-header">
-                <h2>📊 Dashboard สรุปข้อมูลรับยา</h2>
-                <button id="closeDashBtn" class="btn danger" style="width: auto;">ปิด</button>
+        <section id="dashboardSection" class="hidden">
+            <div class="neo-card header-dash">
+                <h2 class="title-text">📊 Dashboard ข้อมูลปฏิบัติงาน</h2>
+                <button id="closeDashBtn" class="neo-btn danger-text">ปิด</button>
             </div>
             
-            <div class="filters">
-                <select id="filterTime">
-                    <option value="all">ข้อมูลทั้งหมด</option>
-                    <option value="30days">ย้อนหลัง 30 วัน</option>
-                    <option value="1year">ย้อนหลัง 1 ปี</option>
+            <div class="neo-card filters">
+                <select id="dashFilterTime" class="neo-input">
+                    <option value="30">ย้อนหลัง 30 วัน</option>
+                    <option value="90">ย้อนหลัง 90 วัน</option>
+                    <option value="180">ย้อนหลัง 180 วัน</option>
+                    <option value="365">ย้อนหลัง 1 ปี (365 วัน)</option>
                 </select>
-                <select id="filterDay">
-                    <option value="all">ทุกวัน</option>
-                    <option value="weekday">เฉพาะวันธรรมดา</option>
-                    <option value="weekend">เฉพาะวันหยุด (ส.-อา.)</option>
-                </select>
+                <select id="dashFilterPharmacist" class="neo-input">
+                    <option value="all">ดูทุกคน (ภาพรวม)</option>
+                    </select>
             </div>
 
-            <div class="z-pattern-grid">
-                <div class="dash-box">
-                    <h3>เวรปัจจุบัน</h3>
-                    <p><strong>ผู้ปฏิบัติงาน:</strong> <span id="dashPharmacist">-</span></p>
-                    <p><strong>เริ่ม:</strong> <span id="dashStartTime">-</span></p>
-                    <p><strong>จบ:</strong> <span id="dashEndTime">-</span></p>
+            <div id="personalStatsSection" class="neo-card hidden">
+                <div class="stats-summary">
+                    <div class="stat-box neo-inset">
+                        <p class="stat-label">จำนวนเวรทั้งหมด</p>
+                        <h3 id="statTotalShifts" class="stat-value primary-text">0</h3>
+                    </div>
+                    <div class="stat-box neo-inset">
+                        <p class="stat-label">ระยะเวลาเฉลี่ย/เวร</p>
+                        <h3 id="statAvgDuration" class="stat-value primary-text">0 ชม. 0 นาที</h3>
+                    </div>
                 </div>
-                <div class="dash-box">
-                    <h3>สถิติการรับยา (ประวัติ)</h3>
-                    <p>จำนวนเวรทั้งหมดที่บันทึก: <span id="statTotalShifts">0</span> เวร</p>
-                </div>
-                <div class="dash-box highlight-green">
-                    <h3>🏆 วอร์ดที่รับยาไวที่สุด (เฉลี่ย)</h3>
-                    <ol id="fastestWardsList"><li>ไม่มีข้อมูล</li></ol>
-                </div>
-                <div class="dash-box highlight-red">
-                    <h3>🐢 วอร์ดที่รับยาช้าที่สุด (เฉลี่ย)</h3>
-                    <ol id="slowestWardsList"><li>ไม่มีข้อมูล</li></ol>
+
+                <h3 class="subtitle-text mt-20">ประวัติเวลาปฏิบัติงาน</h3>
+                <div class="history-list neo-inset" id="shiftHistoryList">
+                    </div>
+            </div>
+
+            <div id="wardStatsSection" class="neo-card">
+                <h3 class="subtitle-text text-center">สถิติการมารับยาของ Ward</h3>
+                <div class="z-pattern-grid mt-20">
+                    <div class="neo-inset p-15">
+                        <h4 class="success-text">🏆 ไวที่สุด (เฉลี่ย)</h4>
+                        <ol id="fastestWardsList" class="ranking-list"></ol>
+                    </div>
+                    <div class="neo-inset p-15">
+                        <h4 class="danger-text">🐢 ช้าที่สุด (เฉลี่ย)</h4>
+                        <ol id="slowestWardsList" class="ranking-list"></ol>
+                    </div>
                 </div>
             </div>
         </section>
     </main>
 
-    <div id="pharmacistBadge" class="badge hidden"><span id="badgeName"></span></div>
+    <div id="pharmacistBadge" class="neo-badge hidden"><span id="badgeName"></span></div>
     <script src="script.js"></script>
 </body>
 </html>
