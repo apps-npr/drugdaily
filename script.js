@@ -66,7 +66,7 @@ function renderWorkUI() {
     document.getElementById('setupSection').classList.add('hidden');
     document.getElementById('workSection').classList.remove('hidden');
     document.getElementById('pharmacistBadge').classList.remove('hidden');
-    document.getElementById('badgeName').innerText = `ภก. ${state.pharmacist.split(' ')[0]}`;
+    document.getElementById('badgeName').innerText = `ผู้ปฏิบัติงาน ${state.pharmacist.split(' ')[0]}`;
     renderWards();
 }
 
