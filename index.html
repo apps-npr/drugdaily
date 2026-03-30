@@ -1,168 +1,103 @@
-:root {
-    --bg-color: #e0e5ec;
-    --text-main: #4a5568;
-    --text-light: #a0aec0;
-    --primary-color: #3182ce;
-    --primary-gradient: linear-gradient(135deg, #4F72FF 0%, #2044F0 100%);
-    --success-color: #38a169;
-    --danger-color: #e53e3e;
-    
-    /* เงา Neumorphism */
-    --shadow-out: 9px 9px 16px rgba(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5);
-    --shadow-in: inset 6px 6px 10px rgba(163, 177, 198, 0.6), inset -6px -6px 10px rgba(255, 255, 255, 0.5);
-    --shadow-btn-out: 5px 5px 10px rgba(163, 177, 198, 0.6), -5px -5px 10px rgba(255, 255, 255, 0.5);
-    --shadow-btn-in: inset 4px 4px 8px rgba(163, 177, 198, 0.6), inset -4px -4px 8px rgba(255, 255, 255, 0.5);
-}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบเช็คชื่อรับยาประจำวัน</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="neo-header">
+        <h1 id="currentDate">กำลังโหลดวันที่...</h1>
+    </header>
 
-body {
-    font-family: 'Kanit', sans-serif;
-    background-color: var(--bg-color);
-    color: var(--text-main);
-    margin: 0; padding: 0; padding-bottom: 80px;
-}
+    <main>
+        <section id="setupSection" class="neo-card text-center">
+            <h2 class="title-text">เลือกเภสัชกรผู้ปฏิบัติงาน</h2>
+            <select id="pharmacistSelect" class="neo-input">
+                <option value="">-- กรุณาเลือกชื่อ --</option>
+            </select>
+            <div class="btn-group">
+                <button id="startShiftBtn" class="neo-btn primary">เริ่มการทำงาน</button>
+                <button id="showLoginBtn" class="neo-btn">สถิติ (Admin)</button>
+            </div>
+        </section>
 
-/* Utilities */
-.text-center { text-align: center; }
-.mt-20 { margin-top: 20px; }
-.p-15 { padding: 15px; }
-.hidden { display: none !important; }
-.title-text { color: var(--text-main); font-weight: 500; font-size: 1.3rem; margin-bottom: 20px; }
-.subtitle-text { color: var(--text-main); font-weight: 500; font-size: 1.1rem; margin-bottom: 10px; }
-.primary-text { color: var(--primary-color); }
-.success-text { color: var(--success-color); }
-.danger-text { color: var(--danger-color); }
+        <section id="workSection" class="hidden">
+            <div class="action-bar neo-card">
+                <button id="endShiftBtn" class="neo-btn danger">จบการทำงานและบันทึก</button>
+            </div>
+            
+            <div class="neo-card">
+                <h2 class="title-text text-center">รายชื่อหอผู้ป่วยรับยา</h2>
+                <div id="wardGrid" class="ward-grid"></div>
+            </div>
+            <p id="syncStatus" class="status-text"></p>
+        </section>
 
-/* Neumorphism Elements */
-.neo-header {
-    background-color: var(--bg-color);
-    padding: 20px; text-align: center;
-    box-shadow: 0 4px 10px rgba(163, 177, 198, 0.3);
-    margin-bottom: 20px;
-}
+        <section id="loginSection" class="hidden neo-card text-center">
+            <h2 class="title-text">เข้าสู่ระบบ Admin</h2>
+            <input type="password" id="adminPass" class="neo-input" placeholder="ใส่รหัสผ่าน">
+            <div class="btn-group">
+                <button id="loginBtn" class="neo-btn primary">เข้าสู่ระบบ</button>
+                <button id="cancelLoginBtn" class="neo-btn">ยกเลิก</button>
+            </div>
+            <p id="loginStatus" class="status-text"></p>
+        </section>
 
-.neo-header h1 { margin: 0; font-size: 1.3rem; font-weight: 500; }
+        <section id="dashboardSection" class="hidden">
+            <div class="neo-card header-dash">
+                <h2 class="title-text">📊 Dashboard ข้อมูลปฏิบัติงาน</h2>
+                <button id="closeDashBtn" class="neo-btn danger-text">ปิด</button>
+            </div>
+            
+            <div class="neo-card filters">
+                <select id="dashFilterTime" class="neo-input">
+                    <option value="30">ย้อนหลัง 30 วัน</option>
+                    <option value="90">ย้อนหลัง 90 วัน</option>
+                    <option value="180">ย้อนหลัง 180 วัน</option>
+                    <option value="365">ย้อนหลัง 1 ปี (365 วัน)</option>
+                </select>
+                <select id="dashFilterPharmacist" class="neo-input">
+                    <option value="all">ดูทุกคน (ภาพรวม)</option>
+                    </select>
+            </div>
 
-main { padding: 0 15px; max-width: 800px; margin: auto; }
+            <div id="personalStatsSection" class="neo-card hidden">
+                <div class="stats-summary">
+                    <div class="stat-box neo-inset">
+                        <p class="stat-label">จำนวนเวรทั้งหมด</p>
+                        <h3 id="statTotalShifts" class="stat-value primary-text">0</h3>
+                    </div>
+                    <div class="stat-box neo-inset">
+                        <p class="stat-label">ระยะเวลาเฉลี่ย/เวร</p>
+                        <h3 id="statAvgDuration" class="stat-value primary-text">0 ชม. 0 นาที</h3>
+                    </div>
+                </div>
 
-.neo-card {
-    background: var(--bg-color);
-    border-radius: 20px;
-    box-shadow: var(--shadow-out);
-    padding: 25px;
-    margin-bottom: 25px;
-}
+                <h3 class="subtitle-text mt-20">ประวัติเวลาปฏิบัติงาน</h3>
+                <div class="history-list neo-inset" id="shiftHistoryList">
+                    </div>
+            </div>
 
-.neo-inset {
-    background: var(--bg-color);
-    border-radius: 15px;
-    box-shadow: var(--shadow-in);
-}
+            <div id="wardStatsSection" class="neo-card">
+                <h3 class="subtitle-text text-center">สถิติการมารับยาของ Ward</h3>
+                <div class="z-pattern-grid mt-20">
+                    <div class="neo-inset p-15">
+                        <h4 class="success-text">🏆 ไวที่สุด (เฉลี่ย)</h4>
+                        <ol id="fastestWardsList" class="ranking-list"></ol>
+                    </div>
+                    <div class="neo-inset p-15">
+                        <h4 class="danger-text">🐢 ช้าที่สุด (เฉลี่ย)</h4>
+                        <ol id="slowestWardsList" class="ranking-list"></ol>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
 
-.neo-input {
-    width: 100%;
-    padding: 15px;
-    background: var(--bg-color);
-    border: none;
-    border-radius: 12px;
-    box-shadow: var(--shadow-in);
-    color: var(--text-main);
-    font-family: 'Kanit', sans-serif;
-    font-size: 1rem;
-    box-sizing: border-box;
-    margin-bottom: 20px;
-    outline: none;
-}
-
-/* Buttons */
-.btn-group { display: flex; flex-direction: column; gap: 15px; }
-
-.neo-btn {
-    background: var(--bg-color);
-    border: none;
-    border-radius: 12px;
-    padding: 15px;
-    font-size: 1rem;
-    font-family: 'Kanit', sans-serif;
-    color: var(--text-main);
-    font-weight: 500;
-    box-shadow: var(--shadow-btn-out);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    width: 100%;
-}
-
-.neo-btn:active { box-shadow: var(--shadow-btn-in); }
-
-.neo-btn.primary { background: var(--primary-gradient); color: white; box-shadow: 4px 4px 10px rgba(32, 68, 240, 0.4); }
-.neo-btn.primary:active { box-shadow: inset 4px 4px 10px rgba(0, 0, 0, 0.2); }
-.neo-btn.danger { color: var(--danger-color); font-weight: 600; }
-
-/* Ward Grid */
-.ward-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
-
-.ward-card {
-    background: var(--bg-color);
-    border-radius: 15px;
-    padding: 15px 10px;
-    text-align: center;
-    box-shadow: var(--shadow-btn-out);
-    cursor: pointer;
-    transition: all 0.2s;
-    user-select: none;
-    border: 2px solid transparent;
-}
-
-.ward-card h3 { margin: 0 0 8px 0; font-size: 0.95rem; font-weight: 500; }
-.ward-card .time-stamp { font-size: 0.85rem; color: var(--text-light); }
-
-/* สถานะรับยาแล้ว (กดให้บุ๋มลงไป และมีขอบเขียวอ่อนๆ) */
-.ward-card.completed {
-    box-shadow: var(--shadow-btn-in);
-    border: 2px solid rgba(56, 161, 105, 0.5);
-}
-.ward-card.completed h3 { color: var(--success-color); }
-.ward-card.completed .time-stamp { color: var(--success-color); font-weight: 500; }
-
-/* Dashboard UI */
-.header-dash { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; }
-.header-dash h2 { margin: 0; }
-.header-dash button { width: auto; padding: 8px 15px; }
-.filters { display: flex; flex-direction: column; gap: 0; padding: 20px; }
-.filters select { margin-bottom: 10px; }
-
-.stats-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-.stat-box { padding: 15px; text-align: center; }
-.stat-label { margin: 0 0 5px 0; font-size: 0.9rem; color: var(--text-light); }
-.stat-value { margin: 0; font-size: 1.4rem; }
-
-.history-list { max-height: 300px; overflow-y: auto; padding: 10px; border-radius: 15px; }
-.history-item { 
-    display: flex; justify-content: space-between; align-items: center; 
-    padding: 12px; border-bottom: 1px solid rgba(163,177,198,0.2); 
-    font-size: 0.95rem;
-}
-.history-item:last-child { border-bottom: none; }
-.history-date { font-weight: 500; }
-.history-time { color: var(--text-light); font-size: 0.9rem;}
-
-.z-pattern-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
-.ranking-list { padding-left: 20px; margin: 0; font-size: 0.95rem; }
-.ranking-list li { margin-bottom: 8px; color: var(--text-main); }
-
-.neo-badge {
-    position: fixed; bottom: 20px; right: 20px;
-    background: var(--bg-color);
-    color: var(--primary-color);
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-weight: 600;
-    box-shadow: var(--shadow-out);
-    z-index: 1000;
-}
-
-@media (min-width: 600px) {
-    .filters { flex-direction: row; gap: 15px; }
-    .filters select { margin-bottom: 0; }
-    .z-pattern-grid { grid-template-columns: 1fr 1fr; }
-    .btn-group { flex-direction: row; }
-}
+    <div id="pharmacistBadge" class="neo-badge hidden"><span id="badgeName"></span></div>
+    <script src="script.js"></script>
+</body>
+</html>
