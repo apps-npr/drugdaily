@@ -39,6 +39,7 @@ body {
 /* Utilities */
 .text-center { text-align: center; }
 .mt-20 { margin-top: 20px; }
+.mb-20 { margin-bottom: 20px; }
 .p-15 { padding: 15px; }
 .hidden { display: none !important; }
 .title-text { font-weight: 600; font-size: 1.4rem; margin-bottom: 20px; color: var(--text-dark); }
@@ -174,6 +175,31 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
     box-shadow: var(--glass-shadow);
     z-index: 1000;
 }
+
+/* ส่วนของกราฟ (Chart.js) */
+.chart-container {
+    position: relative;
+    height: 250px; /* ความสูงของกราฟ */
+    width: 100%;
+}
+
+/* ปรับแต่งรายชื่อ Leaderboard เภสัชกร */
+.leaderboard-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px dashed rgba(255,255,255,0.4);
+}
+.leaderboard-item:last-child { border-bottom: none; }
+.rank-badge {
+    background: var(--primary-color);
+    color: white;
+    width: 24px; height: 24px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%; margin-right: 10px; font-size: 0.8rem;
+}
+.leaderboard-stats { text-align: right; font-size: 0.9rem; color: var(--text-dark); }
 
 @media (min-width: 600px) {
     .filters { flex-direction: row; gap: 15px; }
