@@ -6,6 +6,8 @@ const pharmacists = [ "ภญ.เสาวภา ศิริกาญจน์ 
 
 let state = { pharmacist: "", startTime: null, endTime: null, wardData: {} };
 let dashboardRawData = []; 
+let trendChartInstance = null;
+let peakHourChartInstance = null;
 
 const elDate = document.getElementById('currentDate');
 const elSelect = document.getElementById('pharmacistSelect');
@@ -117,7 +119,7 @@ document.getElementById('closeDashBtn').addEventListener('click', () => {
     document.getElementById('setupSection').classList.remove('hidden');
 });
 
-// ระบบ Tab
+// ระบบ Tab (สลับหน้ารายวัน)
 const btnTabOverview = document.getElementById('tabOverview');
 const btnTabDaily = document.getElementById('tabDaily');
 const tabOverviewContent = document.getElementById('overviewTabContent');
@@ -142,7 +144,6 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     if(!pass) return alert("กรุณาใส่รหัสผ่าน");
     const loginStatus = document.getElementById('loginStatus');
     loginStatus.innerText = "⏳ กำลังดึงข้อมูล...";
-    loginStatus.style.color = "white";
     
     try {
         const response = await fetch(`${GOOGLE_SHEET_WEB_APP_URL}?action=login&pass=${encodeURIComponent(pass)}`);
@@ -155,7 +156,7 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
             document.getElementById('adminPass').value = '';
             
             calculateDashboardStats();
-            populateDailySelect(); // โหลดข้อมูลรายวันใส่ Dropdown
+            populateDailySelect();
         } else {
             loginStatus.innerText = "❌ รหัสผ่านไม่ถูกต้อง";
         }
@@ -167,7 +168,6 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
 document.getElementById('dashFilterTime').addEventListener('change', calculateDashboardStats);
 document.getElementById('dashFilterPharmacist').addEventListener('change', calculateDashboardStats);
 
-// ตัวช่วยคัดลอกเฉพาะตัวเลขเวลา (ป้องกันปัญหา Date Object แปลงร่างใน Sheet)
 function extractTime(str) {
     if (!str) return null;
     const match = String(str).match(/(\d+):(\d+)/);
@@ -194,23 +194,30 @@ function calculateDashboardStats() {
         return true;
     });
 
-    const personalSec = document.getElementById('personalStatsSection');
+    const chartsSec = document.getElementById('chartsSection');
     const wardSec = document.getElementById('wardStatsSection');
+    const leaderSec = document.getElementById('pharmacistLeaderboard');
+    const personalSec = document.getElementById('personalHistorySection');
     
-    if(pharFilter === 'all') {
-        personalSec.classList.add('hidden');
-        wardSec.classList.remove('hidden');
-    } else {
-        personalSec.classList.remove('hidden');
-        wardSec.classList.add('hidden');
-        document.getElementById('statTotalShifts').innerText = filteredData.length;
-    }
+    document.getElementById('statTotalShifts').innerText = filteredData.length;
 
     if(pharFilter === 'all') {
+        chartsSec.classList.remove('hidden');
+        wardSec.classList.remove('hidden');
+        leaderSec.classList.remove('hidden');
+        personalSec.classList.add('hidden');
+        
+        // --- คำนวณภาพรวม ---
         let wardStats = {};
         wards.forEach(w => wardStats[w] = { totalMins: 0, count: 0 });
+        let peakHours = {};
+        let pharCounts = {};
 
         filteredData.forEach(row => {
+            // นับเวรเภสัช
+            let pName = row[1];
+            if(pName) { pharCounts[pName] = (pharCounts[pName] || 0) + 1; }
+
             const startObj = extractTime(row[2]);
             const wardJsonStr = row[4];
             if(startObj && wardJsonStr) {
@@ -219,20 +226,25 @@ function calculateDashboardStats() {
                     let startMins = startObj.h * 60 + startObj.m;
 
                     for(let w in wardData) {
-                        if(wardStats[w]) {
-                            const wObj = extractTime(wardData[w]);
-                            if(wObj) {
+                        const wObj = extractTime(wardData[w]);
+                        if(wObj) {
+                            // คำนวณเวลาเฉลี่ย
+                            if(wardStats[w]) {
                                 let wardMins = wObj.h * 60 + wObj.m;
                                 if (wardMins < startMins) wardMins += (24 * 60);
                                 wardStats[w].totalMins += (wardMins - startMins);
                                 wardStats[w].count += 1;
                             }
+                            // คำนวณชั่วโมงที่พีค
+                            let hStr = `${wObj.h.toString().padStart(2, '0')}:00`;
+                            peakHours[hStr] = (peakHours[hStr] || 0) + 1;
                         }
                     }
                 } catch(e) {}
             }
         });
 
+        // 1. จัดอันดับ Ward
         let ranking = [];
         for(let w in wardStats) {
             if(wardStats[w].count > 0) {
@@ -248,10 +260,105 @@ function calculateDashboardStats() {
         if(ranking.length === 0) {
             fastList.innerHTML = '<li>ไม่มีข้อมูล</li>'; slowList.innerHTML = '<li>ไม่มีข้อมูล</li>';
         } else {
-            ranking.slice(0, 3).forEach(r => fastList.innerHTML += `<li><strong>${r.ward}</strong> <span style="color:#059669;">(${r.avgMins} นาที)</span></li>`);
-            ranking.slice(-3).reverse().forEach(r => slowList.innerHTML += `<li><strong>${r.ward}</strong> <span style="color:#dc2626;">(${r.avgMins} นาที)</span></li>`);
+            ranking.slice(0, 5).forEach(r => fastList.innerHTML += `<li><strong>${r.ward}</strong> <span style="color:#059669;">(${r.avgMins} นาที)</span></li>`);
+            ranking.slice(-5).reverse().forEach(r => slowList.innerHTML += `<li><strong>${r.ward}</strong> <span style="color:#dc2626;">(${r.avgMins} นาที)</span></li>`);
+        }
+
+        // 2. Leaderboard เภสัชกร
+        let lBoard = Object.entries(pharCounts).sort((a,b) => b[1] - a[1]);
+        const lList = document.getElementById('leaderboardList');
+        lList.innerHTML = '';
+        lBoard.slice(0, 5).forEach((item, index) => {
+            let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '👏';
+            lList.innerHTML += `<li class="leaderboard-item"><span>${medal} ${item[0]}</span> <strong>${item[1]} เวร</strong></li>`;
+        });
+
+        // 3. วาดกราฟ Chart.js
+        drawCharts(ranking, peakHours);
+
+    } else {
+        // --- ดูข้อมูลส่วนตัว (ซ่อนกราฟ/Leaderboard) ---
+        chartsSec.classList.add('hidden');
+        wardSec.classList.add('hidden');
+        leaderSec.classList.add('hidden');
+        personalSec.classList.remove('hidden');
+
+        let totalMins = 0;
+        let historyHTML = '';
+        
+        filteredData.reverse().forEach(row => {
+            const dateStr = row[0];
+            const startObj = extractTime(row[2]);
+            const endObj = extractTime(row[3]);
+            const start = startObj ? startObj.raw : '-'; 
+            const end = endObj ? endObj.raw : '-';
+            
+            if(startObj && endObj) {
+                let diff = (endObj.h*60 + endObj.m) - (startObj.h*60 + startObj.m);
+                if (diff < 0) diff += 24*60;
+                totalMins += diff;
+            }
+
+            historyHTML += `<div class="history-item"><span>📅 ${dateStr}</span> <span style="color:#059669;">⏱️ ${start} - ${end}</span></div>`;
+        });
+        
+        document.getElementById('shiftHistoryList').innerHTML = historyHTML || '<p class="text-center">ไม่มีข้อมูล</p>';
+        
+        if(filteredData.length > 0) {
+            let avgMins = Math.round(totalMins / filteredData.length);
+            document.getElementById('statAvgDuration').innerText = `${Math.floor(avgMins / 60)} ชม. ${avgMins % 60} นาที`;
+        } else {
+            document.getElementById('statAvgDuration').innerText = "0 ชม. 0 นาที";
         }
     }
+}
+
+// วาดกราฟด้วย Chart.js
+function drawCharts(rankingData, peakHoursData) {
+    if(trendChartInstance) trendChartInstance.destroy();
+    if(peakHourChartInstance) peakHourChartInstance.destroy();
+
+    // กราฟแนวโน้ม (เวลาเฉลี่ย)
+    const ctxTrend = document.getElementById('trendChart').getContext('2d');
+    const labels = rankingData.map(d => d.ward);
+    const data = rankingData.map(d => d.avgMins);
+    
+    trendChartInstance = new Chart(ctxTrend, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'เวลาเฉลี่ย (นาที)',
+                data: data,
+                backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                borderColor: 'rgba(16, 185, 129, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // กราฟช่วงเวลา Peak Hour
+    const ctxPeak = document.getElementById('peakHourChart').getContext('2d');
+    const sortedHours = Object.keys(peakHoursData).sort();
+    const peakCounts = sortedHours.map(h => peakHoursData[h]);
+
+    peakHourChartInstance = new Chart(ctxPeak, {
+        type: 'line',
+        data: {
+            labels: sortedHours,
+            datasets: [{
+                label: 'จำนวน Ward ที่มารับยา',
+                data: peakCounts,
+                backgroundColor: 'rgba(5, 117, 230, 0.2)',
+                borderColor: 'rgba(5, 117, 230, 1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
 }
 
 // ---------------------------------------------------------
@@ -261,7 +368,6 @@ function populateDailySelect() {
     const select = document.getElementById('dailyDateSelect');
     select.innerHTML = '<option value="">-- เลือกเวรที่ต้องการดู --</option>';
     
-    // ดึงข้อมูลจากบรรทัดล่าสุดมาโชว์ก่อน (ไล่จากล่างขึ้นบน)
     for (let i = dashboardRawData.length - 1; i > 0; i--) {
         const row = dashboardRawData[i];
         if (!row[0]) continue;
@@ -305,7 +411,6 @@ document.getElementById('dailyDateSelect').addEventListener('change', (e) => {
 
     grid.innerHTML = '';
     wards.forEach(w => {
-        // เช็คว่าวอร์ดนี้มารับยาหรือยัง
         const isCompleted = parsedWards[w] ? true : false;
         const wTimeObj = isCompleted ? extractTime(parsedWards[w]) : null;
         const timeDisplay = wTimeObj ? wTimeObj.raw : 'ไม่มารับยา';
