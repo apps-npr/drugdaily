@@ -54,64 +54,86 @@
                 <h2 class="title-text" style="margin:0;">📊 Dashboard Analytics</h2>
                 <button id="closeDashBtn" class="glass-btn danger small-btn">ปิด</button>
             </div>
+
+            <div class="dash-tabs mb-20">
+                <button id="tabOverview" class="glass-btn active-tab">สถิติภาพรวม</button>
+                <button id="tabDaily" class="glass-btn outline">ดูข้อมูลรายวัน</button>
+            </div>
             
-            <div class="filters">
-                <select id="dashFilterTime" class="glass-input">
-                    <option value="30">ย้อนหลัง 30 วัน</option>
-                    <option value="90">ย้อนหลัง 90 วัน</option>
-                    <option value="180">ย้อนหลัง 180 วัน</option>
-                    <option value="365">ย้อนหลัง 1 ปี</option>
-                </select>
-                <select id="dashFilterPharmacist" class="glass-input">
-                    <option value="all">ดูข้อมูลรวมทุกคน</option>
-                </select>
-            </div>
+            <div id="overviewTabContent">
+                <div class="filters">
+                    <select id="dashFilterTime" class="glass-input">
+                        <option value="30">ย้อนหลัง 30 วัน</option>
+                        <option value="90">ย้อนหลัง 90 วัน</option>
+                        <option value="180">ย้อนหลัง 180 วัน</option>
+                        <option value="365">ย้อนหลัง 1 ปี</option>
+                    </select>
+                    <select id="dashFilterPharmacist" class="glass-input">
+                        <option value="all">ดูข้อมูลรวมทุกคน</option>
+                    </select>
+                </div>
 
-            <div class="stats-summary mt-20">
-                <div class="stat-box glass-inner">
-                    <p class="stat-label">จำนวนเวรทั้งหมด</p>
-                    <h3 id="statTotalShifts" class="stat-value">0</h3>
-                </div>
-                <div class="stat-box glass-inner">
-                    <p class="stat-label">เวลาปฏิบัติงานเฉลี่ย</p>
-                    <h3 id="statAvgDuration" class="stat-value">0 ชม.</h3>
-                </div>
-            </div>
-
-            <div id="chartsSection" class="mt-20">
-                <div class="glass-inner mb-20">
-                    <h3 class="subtitle-text text-center">📈 แนวโน้มเวลาการมารับยาเฉลี่ย (นาที)</h3>
-                    <div class="chart-container"><canvas id="trendChart"></canvas></div>
-                </div>
-                <div class="glass-inner mb-20">
-                    <h3 class="subtitle-text text-center">⏰ ช่วงเวลาที่ Ward มารับยาหนาแน่นที่สุด</h3>
-                    <div class="chart-container"><canvas id="peakHourChart"></canvas></div>
-                </div>
-            </div>
-
-            <div id="wardStatsSection">
-                <div class="z-pattern-grid mt-20">
-                    <div class="glass-inner p-15">
-                        <h4 style="color:#059669; margin-top:0;">🏆 5 อันดับ Ward มารับไวสุด</h4>
-                        <ol id="fastestWardsList" class="ranking-list"></ol>
+                <div class="stats-summary mt-20">
+                    <div class="stat-box glass-inner">
+                        <p class="stat-label">จำนวนเวรทั้งหมด</p>
+                        <h3 id="statTotalShifts" class="stat-value">0</h3>
                     </div>
-                    <div class="glass-inner p-15">
-                        <h4 style="color:#dc2626; margin-top:0;">🐢 5 อันดับ Ward มารับช้าสุด</h4>
-                        <ol id="slowestWardsList" class="ranking-list"></ol>
+                    <div class="stat-box glass-inner">
+                        <p class="stat-label">เวลาปฏิบัติงานเฉลี่ย</p>
+                        <h3 id="statAvgDuration" class="stat-value">0 ชม.</h3>
                     </div>
                 </div>
-            </div>
 
-            <div id="pharmacistLeaderboard" class="mt-20">
-                <h3 class="subtitle-text text-center">👨‍⚕️ สถิติการเข้าเวรของเภสัชกร</h3>
-                <div class="glass-inner">
-                    <ul id="leaderboardList" class="history-list" style="padding-left:0; list-style:none;"></ul>
+                <div id="chartsSection" class="mt-20">
+                    <div class="glass-inner mb-20">
+                        <h3 class="subtitle-text text-center">📈 แนวโน้มเวลาการมารับยาเฉลี่ย (นาที)</h3>
+                        <div class="chart-container"><canvas id="trendChart"></canvas></div>
+                    </div>
+                    <div class="glass-inner mb-20">
+                        <h3 class="subtitle-text text-center">⏰ ช่วงเวลาที่ Ward มารับยาหนาแน่นที่สุด</h3>
+                        <div class="chart-container"><canvas id="peakHourChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div id="wardStatsSection">
+                    <div class="z-pattern-grid mt-20">
+                        <div class="glass-inner p-15">
+                            <h4 style="color:#059669; margin-top:0;">🏆 5 อันดับ Ward มารับไวสุด</h4>
+                            <ol id="fastestWardsList" class="ranking-list"></ol>
+                        </div>
+                        <div class="glass-inner p-15">
+                            <h4 style="color:#dc2626; margin-top:0;">🐢 5 อันดับ Ward มารับช้าสุด</h4>
+                            <ol id="slowestWardsList" class="ranking-list"></ol>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="pharmacistLeaderboard" class="mt-20">
+                    <h3 class="subtitle-text text-center">👨‍⚕️ สถิติการเข้าเวรของเภสัชกร</h3>
+                    <div class="glass-inner">
+                        <ul id="leaderboardList" class="history-list" style="padding-left:0; list-style:none;"></ul>
+                    </div>
+                </div>
+
+                <div id="personalHistorySection" class="mt-20 hidden">
+                    <h3 class="subtitle-text text-center">ประวัติเข้าเวรย้อนหลัง</h3>
+                    <div class="glass-inner history-list" id="shiftHistoryList"></div>
                 </div>
             </div>
 
-            <div id="personalHistorySection" class="mt-20 hidden">
-                <h3 class="subtitle-text text-center">ประวัติเข้าเวรย้อนหลัง</h3>
-                <div class="glass-inner history-list" id="shiftHistoryList"></div>
+            <div id="dailyTabContent" class="hidden">
+                <select id="dailyDateSelect" class="glass-input mb-20">
+                    <option value="">-- กำลังโหลดข้อมูล... --</option>
+                </select>
+
+                <div id="dailyShiftInfo" class="glass-inner hidden">
+                    <h3 id="dailyPharName" class="title-text text-center" style="margin-bottom: 5px;">-</h3>
+                    <p class="text-center" style="margin-top: 0;">เวลาเข้าเวร: <span id="dailyShiftTime" style="color:var(--primary-color); font-weight:bold;">-</span></p>
+                    
+                    <h4 class="text-center mt-20" style="color:var(--text-dark);">เวลาที่ Ward มารับยา</h4>
+                    <div id="dailyWardGrid" class="ward-grid mt-20" style="gap:10px;"></div>
+                </div>
+                <p id="dailyNoDataMsg" class="text-center mt-20" style="color:var(--text-dark); font-weight:500;">👆 กรุณาเลือกเวรที่ต้องการดูข้อมูลจากด้านบน</p>
             </div>
 
         </section>
