@@ -200,7 +200,6 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
 .ward-card.readonly { cursor: default; }
 .ward-card.readonly:active { transform: none; }
 
-
 /* -------------------------------------
    ส่วนเสริม: สถานะ "ยาเย็น" (หน้างาน)
 -------------------------------------- */
@@ -259,6 +258,21 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
 /* 4. ถ้ารับยาไปแล้ว ให้ซ่อนปุ่มยาเย็นทิ้งไปเลย เพื่อความคลีน */
 .ward-card.completed .cold-btn {
     display: none !important;
+}
+
+/* -------------------------------------
+   ส่วนเสริม: เบอร์โทรศัพท์ประจำวอร์ด
+-------------------------------------- */
+.ward-phone {
+    font-size: 0.9rem;
+    color: var(--text-dark);
+    opacity: 0.7;
+    margin-top: 5px;
+    font-weight: 500;
+}
+/* เปลี่ยนสีเบอร์โทรให้เข้ากับธีมยาเย็นเมื่อถูกกด */
+.ward-card.has-cold-med .ward-phone {
+    color: #854d0e;
 }
 
 @media (min-width: 600px) {
