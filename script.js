@@ -2,9 +2,24 @@ const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzgpd3
 
 const wards = [ "MICU", "CCU", "Med พิเศษเดี่ยวชั้น 14", "Med พิเศษรวมชั้น 12", "Med ส.ชาย ชั้น 11", "SEMI ชาย ชั้น 11", "SEMI หญิง ชั้น 10", "Stroke unit ชั้น 10", "อายุรกรรม หญิง ชั้น 10", "OBS ER", "ER med ชั้น 8", "AIIR" ];
 
+// เพิ่มข้อมูลเบอร์โทรศัพท์ (ใส่เพิ่มทีหลังได้ตรงช่อง "")
+const wardPhones = {
+    "อายุรกรรม หญิง ชั้น 10": "81020",
+    "Med ส.ชาย ชั้น 11": "81115",
+    "OBS ER": "80110",
+    "ER med ชั้น 8": "80809",
+    "Stroke unit ชั้น 10": "81015",
+    "SEMI ชาย ชั้น 11": "81105",
+    "Med พิเศษเดี่ยวชั้น 14": "81410",
+    "Med พิเศษรวมชั้น 12": "81205",
+    "SEMI หญิง ชั้น 10": "81006",
+    "MICU": "",
+    "CCU": "",
+    "AIIR": ""
+};
+
 const pharmacists = [ "ภญ.เสาวภา ศิริกาญจน์ (แอน)", "ภญ.อรรถยา เปล่งสงวน (พี่แจน)", "ภญ.กนกพร ชูริกาวิทย์ (ใหม่)", "ภญ.รัตติยาพร แก้วสุ (แยม)", "ภญ.สุชญา ประเสริฐปั้น(ใบหม่อน)", "ภญ.วรางค์รัตน์ สุวรรณชาตรี (ตา)", "ภญ.จิราพร คำแก้ว (โอ๋)", "ภญ.ชญานิน กำลัง (ไหม)", "ภก.วีรพัชร พานทอง (กระต๊อบ)", "ภก.ธนณัฏฐ์ แสงอังคนาวิน (แบงค์)", "ภญ.สุกัลยา ยิตนรดิน (พี่สุ)", "ภญ.กนกกช บุศย์น้ำเพชร (พี่บีบ)", "ภญ.วราภรณ์ แสงวิเชียร (พี่ตุ๊ก)", "ภญ.ศุภานันท์ ปิงเจริญกิจกุล (โบว์)", "ภญ.ศศิธร มามีชัย (พี่กุ้ง)", "ภญ.อาทิตยา วงศาโรจน์ (พี่เก๋)", "ภญ.ปนัดดา ชูเย็น (ดิว)", "ภญ.ปัญญภรณ์ ทรงสุนทรวงศ์", "ภญ.ดาริกา อนุรักษ์ชนะพล (กุ๊ก)", "ภญ.อัชฌา เหมะจันทร (พี่ปลา)", "ภก.เทพนรินทร์ ช่างประเสริฐ", "ภญ.พรทิพย์ วรนัยพินิจ", "ภญ.วรมน พิเชียรโสภณ (แพร)", "ภญ.อัจฉรา ภัทรสมสกุล (อุ๊)", "ภก.สุทธิเกียรติ สำเภา (สุท)", "ภญ.จุติพร ร่วมใจ (จอย)", "ภญ.ชนม์นิภา กุมภคาม (ชนม์)", "ภก.ปัณณวิชญ์ เรืองพัฒนโกศล (ตีโต้)", "ภญ.ธนภรณ์ ล้อมมหาดไทย (อุ้ม)", "ภญ.นลินรัตน์ ลิ่วศรีวิไล (แพร)", "ภญ.ชนิดาภา ตันตินิยงคกุล (มิว)", "ภญ.แพรพลอย ดรุณวัติ", "ภก.กันตพงศ์ วงศ์เอกเกษม (ซัน)", "ภญ.ลลิตา แย้มสุริโยทัย (แจน)", "ภญ.มัญชุพร ยมศิริ (หมิว)", "ภญ.ภัทรานิษฐ์ หวังมีสรี (น้ำ)", "ภก.ฐาปกรณ์ เบี้ยกระโทก (ปป)", "ภญ.ธารญา โกฉัยพัฒน์ (พัชชา)", "ภก.วันเฉลิม มีมูซอ (อาร์ม)", "ภก.วิศรุต สมบูรณ์วงศ์ (มาร์ค)", "ภญ.ธนัชพร ชัยวัฒนกุล(นัท)" ];
 
-// เพิ่ม state.coldMeds เพื่อเก็บข้อมูลยาเย็นหน้างานชั่วคราว
 let state = { pharmacist: "", startTime: null, endTime: null, wardData: {}, coldMeds: {} };
 let dashboardRawData = []; 
 let trendChartInstance = null;
@@ -29,7 +44,7 @@ function init() {
     const saved = localStorage.getItem('shiftState');
     if (saved) {
         state = JSON.parse(saved);
-        if (!state.coldMeds) state.coldMeds = {}; // ป้องกันบัคเวลาดึงจากแคชเก่า
+        if (!state.coldMeds) state.coldMeds = {};
         if (state.pharmacist && state.startTime && !state.endTime) renderWorkUI();
     }
 }
@@ -42,29 +57,30 @@ function renderWards() {
         const card = document.createElement('div');
         card.className = 'ward-card';
         
-        // เช็คว่าติ๊กยาเย็นไว้ไหม
         if (state.coldMeds && state.coldMeds[ward]) {
             card.classList.add('has-cold-med');
         }
-        
-        // เช็คว่ามารับยาหรือยัง
         if (state.wardData[ward]) {
             card.classList.add('completed');
         }
 
         const title = document.createElement('h3'); title.innerText = ward;
+        
         const timeStr = document.createElement('div');
         timeStr.className = 'time-stamp';
         timeStr.innerText = state.wardData[ward] ? `✔️ รับยาแล้ว` : 'รอรับยา';
 
-        // สร้างปุ่มยาเย็น
+        // ส่วนสร้างการแสดงเบอร์โทรศัพท์
+        const phoneStr = document.createElement('div');
+        phoneStr.className = 'ward-phone';
+        phoneStr.innerText = `📞 ${wardPhones[ward] || '-'}`;
+
         const coldBtn = document.createElement('button');
         coldBtn.className = 'cold-btn';
         coldBtn.innerHTML = (state.coldMeds && state.coldMeds[ward]) ? '❄️ มียาเย็น' : '➕ มียาเย็น';
         
-        // Event กดยาเย็น
         coldBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // กันไม่ให้กดทะลุไปโดนตัวการ์ดใหญ่
+            e.stopPropagation(); 
             if (!state.endTime && !state.wardData[ward]) {
                 if (!state.coldMeds) state.coldMeds = {};
                 state.coldMeds[ward] = !state.coldMeds[ward];
@@ -73,11 +89,6 @@ function renderWards() {
             }
         });
 
-        card.appendChild(title); 
-        card.appendChild(timeStr);
-        card.appendChild(coldBtn);
-
-        // Event กดการ์ดใหญ่เพื่อเช็คชื่อรับยา
         card.addEventListener('click', () => {
             if (!state.endTime) {
                 if (!state.wardData[ward]) {
@@ -88,6 +99,12 @@ function renderWards() {
                 saveState(); renderWards();
             }
         });
+        
+        // เรียงลำดับสิ่งที่แสดงในการ์ด
+        card.appendChild(title); 
+        card.appendChild(timeStr);
+        card.appendChild(phoneStr); // แทรกลงไปใต้สถานะเวลา
+        card.appendChild(coldBtn);
         
         wardGrid.appendChild(card);
     });
@@ -107,7 +124,7 @@ btnStart.addEventListener('click', () => {
     state.startTime = new Date().toISOString();
     state.endTime = null; 
     state.wardData = {};
-    state.coldMeds = {}; // เคลียร์ยาเย็นออกเมื่อเริ่มงานใหม่
+    state.coldMeds = {}; 
     saveState(); renderWorkUI();
 });
 
@@ -119,7 +136,6 @@ btnEnd.addEventListener('click', async () => {
         const syncStatus = document.getElementById('syncStatus');
         syncStatus.innerText = "⏳ กำลังบันทึกข้อมูล...";
 
-        // Payload ส่งแค่ wardData ไม่ส่ง coldMeds ตามที่คุณต้องการ
         const payload = {
             date: new Date().toLocaleDateString('th-TH'),
             pharmacist: state.pharmacist,
@@ -152,7 +168,6 @@ document.getElementById('closeDashBtn').addEventListener('click', () => {
     document.getElementById('setupSection').classList.remove('hidden');
 });
 
-// ระบบ Tab (สลับหน้ารายวัน)
 const btnTabOverview = document.getElementById('tabOverview');
 const btnTabDaily = document.getElementById('tabDaily');
 const tabOverviewContent = document.getElementById('overviewTabContent');
@@ -433,12 +448,16 @@ document.getElementById('dailyDateSelect').addEventListener('change', (e) => {
         const isCompleted = parsedWards[w] ? true : false;
         const wTimeObj = isCompleted ? extractTime(parsedWards[w]) : null;
         const timeDisplay = wTimeObj ? wTimeObj.raw : 'ไม่มารับยา';
+        
+        // ดึงข้อมูลเบอร์โทร มาแสดงในหน้ารายวันด้วย
+        const phoneDisplay = wardPhones[w] ? `📞 ${wardPhones[w]}` : `📞 -`;
 
         const card = document.createElement('div');
         card.className = `ward-card readonly ${isCompleted ? 'completed' : ''}`;
         card.innerHTML = `
             <h3 style="font-size:1.1rem; margin-bottom:5px;">${w}</h3>
             <div class="time-stamp" style="font-size:1rem; padding:4px; ${!isCompleted ? 'background:rgba(239,68,68,0.2); color:#dc2626;' : ''}">${timeDisplay}</div>
+            <div class="ward-phone" style="font-size:0.85rem; margin-top:5px; color:var(--text-dark); opacity:0.7;">${phoneDisplay}</div>
         `;
         grid.appendChild(card);
     });
