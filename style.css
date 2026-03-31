@@ -132,14 +132,6 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
     padding: 4px 0;
 }
 
-.ward-card.completed {
-    background: white;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-    border-color: white;
-}
-.ward-card.completed h3 { color: var(--primary-color); }
-.ward-card.completed .time-stamp { background: #d1fae5; color: #065f46; font-weight: 600; }
-
 /* Dashboard UI */
 .header-dash { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px; margin-bottom: 15px; }
 .filters { display: flex; flex-direction: column; gap: 0; }
@@ -175,7 +167,7 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
 }
 
 /* -------------------------------------
-   ส่วนเสริมใหม่ สำหรับ กราฟ และ Leaderboard และระบบ Tab
+   ส่วนเสริมสำหรับ กราฟ Leaderboard และระบบ Tab
 -------------------------------------- */
 .dash-tabs { display: flex; gap: 10px; }
 .dash-tabs .glass-btn { flex: 1; padding: 12px; font-size: 1rem; border-radius: 12px; }
@@ -207,6 +199,67 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
 /* ปรับการ์ดวอร์ดในหน้ารายวัน ไม่ให้กดได้ */
 .ward-card.readonly { cursor: default; }
 .ward-card.readonly:active { transform: none; }
+
+
+/* -------------------------------------
+   ส่วนเสริม: สถานะ "ยาเย็น" (หน้างาน)
+-------------------------------------- */
+/* 1. ปุ่มยาเย็น (ก่อนกด) - ปรับให้ซอฟต์ลง เป็นแค่เส้นประบางๆ ไม่แย่งซีนชื่อวอร์ด */
+.cold-btn {
+    margin-top: 10px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    border: 1px dashed rgba(6, 78, 59, 0.4);
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-family: 'Kanit', sans-serif;
+    color: var(--text-dark);
+    opacity: 0.6;
+    transition: all 0.2s;
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+}
+.cold-btn:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.4);
+}
+
+/* 2. เมื่อกดปุ่มยาเย็นแล้ว - การ์ดจะเปลี่ยนเป็นสีเหลืองเด่นชัด */
+.ward-card.has-cold-med {
+    background: #fef08a !important; 
+    border: 2px solid #facc15 !important;
+    box-shadow: 0 4px 15px rgba(250, 204, 21, 0.4) !important;
+}
+.ward-card.has-cold-med h3 { color: #854d0e !important; }
+.ward-card.has-cold-med .time-stamp {
+    background: rgba(255, 255, 255, 0.8) !important;
+    color: #854d0e !important;
+    font-weight: 600;
+}
+.ward-card.has-cold-med .cold-btn {
+    background: #eab308;
+    border: 1px solid #ca8a04;
+    color: white;
+    opacity: 1;
+    font-weight: 600;
+}
+
+/* 3. สถานะ "รับยาแล้ว" (Completed) - ต้องมีความสำคัญสูงสุด ทับสีเหลืองให้กลับมาเป็นสีขาว/เขียวปกติ */
+.ward-card.completed {
+    background: white !important;
+    border-color: white !important;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
+}
+.ward-card.completed h3 { color: var(--primary-color) !important; }
+.ward-card.completed .time-stamp { background: #d1fae5 !important; color: #065f46 !important; font-weight: 600 !important; }
+
+/* 4. ถ้ารับยาไปแล้ว ให้ซ่อนปุ่มยาเย็นทิ้งไปเลย เพื่อความคลีน */
+.ward-card.completed .cold-btn {
+    display: none !important;
+}
 
 @media (min-width: 600px) {
     .filters { flex-direction: row; gap: 15px; }
