@@ -4,7 +4,8 @@ const wards = [ "MICU", "CCU", "Med พิเศษเดี่ยวชั้�
 
 const pharmacists = [ "ภญ.เสาวภา ศิริกาญจน์ (แอน)", "ภญ.อรรถยา เปล่งสงวน (พี่แจน)", "ภญ.กนกพร ชูริกาวิทย์ (ใหม่)", "ภญ.รัตติยาพร แก้วสุ (แยม)", "ภญ.สุชญา ประเสริฐปั้น(ใบหม่อน)", "ภญ.วรางค์รัตน์ สุวรรณชาตรี (ตา)", "ภญ.จิราพร คำแก้ว (โอ๋)", "ภญ.ชญานิน กำลัง (ไหม)", "ภก.วีรพัชร พานทอง (กระต๊อบ)", "ภก.ธนณัฏฐ์ แสงอังคนาวิน (แบงค์)", "ภญ.สุกัลยา ยิตนรดิน (พี่สุ)", "ภญ.กนกกช บุศย์น้ำเพชร (พี่บีบ)", "ภญ.วราภรณ์ แสงวิเชียร (พี่ตุ๊ก)", "ภญ.ศุภานันท์ ปิงเจริญกิจกุล (โบว์)", "ภญ.ศศิธร มามีชัย (พี่กุ้ง)", "ภญ.อาทิตยา วงศาโรจน์ (พี่เก๋)", "ภญ.ปนัดดา ชูเย็น (ดิว)", "ภญ.ปัญญภรณ์ ทรงสุนทรวงศ์", "ภญ.ดาริกา อนุรักษ์ชนะพล (กุ๊ก)", "ภญ.อัชฌา เหมะจันทร (พี่ปลา)", "ภก.เทพนรินทร์ ช่างประเสริฐ", "ภญ.พรทิพย์ วรนัยพินิจ", "ภญ.วรมน พิเชียรโสภณ (แพร)", "ภญ.อัจฉรา ภัทรสมสกุล (อุ๊)", "ภก.สุทธิเกียรติ สำเภา (สุท)", "ภญ.จุติพร ร่วมใจ (จอย)", "ภญ.ชนม์นิภา กุมภคาม (ชนม์)", "ภก.ปัณณวิชญ์ เรืองพัฒนโกศล (ตีโต้)", "ภญ.ธนภรณ์ ล้อมมหาดไทย (อุ้ม)", "ภญ.นลินรัตน์ ลิ่วศรีวิไล (แพร)", "ภญ.ชนิดาภา ตันตินิยงคกุล (มิว)", "ภญ.แพรพลอย ดรุณวัติ", "ภก.กันตพงศ์ วงศ์เอกเกษม (ซัน)", "ภญ.ลลิตา แย้มสุริโยทัย (แจน)", "ภญ.มัญชุพร ยมศิริ (หมิว)", "ภญ.ภัทรานิษฐ์ หวังมีสรี (น้ำ)", "ภก.ฐาปกรณ์ เบี้ยกระโทก (ปป)", "ภญ.ธารญา โกฉัยพัฒน์ (พัชชา)", "ภก.วันเฉลิม มีมูซอ (อาร์ม)", "ภก.วิศรุต สมบูรณ์วงศ์ (มาร์ค)", "ภญ.ธนัชพร ชัยวัฒนกุล(นัท)" ];
 
-let state = { pharmacist: "", startTime: null, endTime: null, wardData: {} };
+// เพิ่ม state.coldMeds เพื่อเก็บข้อมูลยาเย็นหน้างานชั่วคราว
+let state = { pharmacist: "", startTime: null, endTime: null, wardData: {}, coldMeds: {} };
 let dashboardRawData = []; 
 let trendChartInstance = null;
 let peakHourChartInstance = null;
@@ -28,6 +29,7 @@ function init() {
     const saved = localStorage.getItem('shiftState');
     if (saved) {
         state = JSON.parse(saved);
+        if (!state.coldMeds) state.coldMeds = {}; // ป้องกันบัคเวลาดึงจากแคชเก่า
         if (state.pharmacist && state.startTime && !state.endTime) renderWorkUI();
     }
 }
@@ -39,15 +41,43 @@ function renderWards() {
     wards.forEach(ward => {
         const card = document.createElement('div');
         card.className = 'ward-card';
-        if (state.wardData[ward]) card.classList.add('completed');
+        
+        // เช็คว่าติ๊กยาเย็นไว้ไหม
+        if (state.coldMeds && state.coldMeds[ward]) {
+            card.classList.add('has-cold-med');
+        }
+        
+        // เช็คว่ามารับยาหรือยัง
+        if (state.wardData[ward]) {
+            card.classList.add('completed');
+        }
 
         const title = document.createElement('h3'); title.innerText = ward;
         const timeStr = document.createElement('div');
         timeStr.className = 'time-stamp';
         timeStr.innerText = state.wardData[ward] ? `✔️ รับยาแล้ว` : 'รอรับยา';
 
-        card.appendChild(title); card.appendChild(timeStr);
+        // สร้างปุ่มยาเย็น
+        const coldBtn = document.createElement('button');
+        coldBtn.className = 'cold-btn';
+        coldBtn.innerHTML = (state.coldMeds && state.coldMeds[ward]) ? '❄️ มียาเย็น' : '➕ มียาเย็น';
+        
+        // Event กดยาเย็น
+        coldBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // กันไม่ให้กดทะลุไปโดนตัวการ์ดใหญ่
+            if (!state.endTime && !state.wardData[ward]) {
+                if (!state.coldMeds) state.coldMeds = {};
+                state.coldMeds[ward] = !state.coldMeds[ward];
+                saveState();
+                renderWards();
+            }
+        });
 
+        card.appendChild(title); 
+        card.appendChild(timeStr);
+        card.appendChild(coldBtn);
+
+        // Event กดการ์ดใหญ่เพื่อเช็คชื่อรับยา
         card.addEventListener('click', () => {
             if (!state.endTime) {
                 if (!state.wardData[ward]) {
@@ -58,6 +88,7 @@ function renderWards() {
                 saveState(); renderWards();
             }
         });
+        
         wardGrid.appendChild(card);
     });
 }
@@ -76,6 +107,7 @@ btnStart.addEventListener('click', () => {
     state.startTime = new Date().toISOString();
     state.endTime = null; 
     state.wardData = {};
+    state.coldMeds = {}; // เคลียร์ยาเย็นออกเมื่อเริ่มงานใหม่
     saveState(); renderWorkUI();
 });
 
@@ -87,6 +119,7 @@ btnEnd.addEventListener('click', async () => {
         const syncStatus = document.getElementById('syncStatus');
         syncStatus.innerText = "⏳ กำลังบันทึกข้อมูล...";
 
+        // Payload ส่งแค่ wardData ไม่ส่ง coldMeds ตามที่คุณต้องการ
         const payload = {
             date: new Date().toLocaleDateString('th-TH'),
             pharmacist: state.pharmacist,
@@ -207,14 +240,12 @@ function calculateDashboardStats() {
         leaderSec.classList.remove('hidden');
         personalSec.classList.add('hidden');
         
-        // --- คำนวณภาพรวม ---
         let wardStats = {};
         wards.forEach(w => wardStats[w] = { totalMins: 0, count: 0 });
         let peakHours = {};
         let pharCounts = {};
 
         filteredData.forEach(row => {
-            // นับเวรเภสัช
             let pName = row[1];
             if(pName) { pharCounts[pName] = (pharCounts[pName] || 0) + 1; }
 
@@ -228,14 +259,12 @@ function calculateDashboardStats() {
                     for(let w in wardData) {
                         const wObj = extractTime(wardData[w]);
                         if(wObj) {
-                            // คำนวณเวลาเฉลี่ย
                             if(wardStats[w]) {
                                 let wardMins = wObj.h * 60 + wObj.m;
                                 if (wardMins < startMins) wardMins += (24 * 60);
                                 wardStats[w].totalMins += (wardMins - startMins);
                                 wardStats[w].count += 1;
                             }
-                            // คำนวณชั่วโมงที่พีค
                             let hStr = `${wObj.h.toString().padStart(2, '0')}:00`;
                             peakHours[hStr] = (peakHours[hStr] || 0) + 1;
                         }
@@ -244,7 +273,6 @@ function calculateDashboardStats() {
             }
         });
 
-        // 1. จัดอันดับ Ward
         let ranking = [];
         for(let w in wardStats) {
             if(wardStats[w].count > 0) {
@@ -264,7 +292,6 @@ function calculateDashboardStats() {
             ranking.slice(-5).reverse().forEach(r => slowList.innerHTML += `<li><strong>${r.ward}</strong> <span style="color:#dc2626;">(${r.avgMins} นาที)</span></li>`);
         }
 
-        // 2. Leaderboard เภสัชกร
         let lBoard = Object.entries(pharCounts).sort((a,b) => b[1] - a[1]);
         const lList = document.getElementById('leaderboardList');
         lList.innerHTML = '';
@@ -273,11 +300,9 @@ function calculateDashboardStats() {
             lList.innerHTML += `<li class="leaderboard-item"><span>${medal} ${item[0]}</span> <strong>${item[1]} เวร</strong></li>`;
         });
 
-        // 3. วาดกราฟ Chart.js
         drawCharts(ranking, peakHours);
 
     } else {
-        // --- ดูข้อมูลส่วนตัว (ซ่อนกราฟ/Leaderboard) ---
         chartsSec.classList.add('hidden');
         wardSec.classList.add('hidden');
         leaderSec.classList.add('hidden');
@@ -313,12 +338,10 @@ function calculateDashboardStats() {
     }
 }
 
-// วาดกราฟด้วย Chart.js
 function drawCharts(rankingData, peakHoursData) {
     if(trendChartInstance) trendChartInstance.destroy();
     if(peakHourChartInstance) peakHourChartInstance.destroy();
 
-    // กราฟแนวโน้ม (เวลาเฉลี่ย)
     const ctxTrend = document.getElementById('trendChart').getContext('2d');
     const labels = rankingData.map(d => d.ward);
     const data = rankingData.map(d => d.avgMins);
@@ -339,7 +362,6 @@ function drawCharts(rankingData, peakHoursData) {
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // กราฟช่วงเวลา Peak Hour
     const ctxPeak = document.getElementById('peakHourChart').getContext('2d');
     const sortedHours = Object.keys(peakHoursData).sort();
     const peakCounts = sortedHours.map(h => peakHoursData[h]);
@@ -361,9 +383,6 @@ function drawCharts(rankingData, peakHoursData) {
     });
 }
 
-// ---------------------------------------------------------
-// ระบบดูข้อมูลรายวัน (Daily View)
-// ---------------------------------------------------------
 function populateDailySelect() {
     const select = document.getElementById('dailyDateSelect');
     select.innerHTML = '<option value="">-- เลือกเวรที่ต้องการดู --</option>';
