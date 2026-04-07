@@ -200,6 +200,7 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
 .ward-card.readonly { cursor: default; }
 .ward-card.readonly:active { transform: none; }
 
+
 /* -------------------------------------
    ส่วนเสริม: สถานะ "ยาเย็น" (หน้างาน)
 -------------------------------------- */
@@ -246,10 +247,52 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
     font-weight: 600;
 }
 
-/* 3. สถานะ "รับยาแล้ว" (Completed) - ต้องมีความสำคัญสูงสุด ทับสีเหลืองให้กลับมาเป็นสีขาว/เขียวปกติ */
+/* -------------------------------------
+   ส่วนเสริม: เบอร์โทรศัพท์ประจำวอร์ด & สถานะ "โทรแจ้งแล้ว"
+-------------------------------------- */
+.ward-phone {
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    opacity: 0.8;
+    margin-top: 8px;
+    font-weight: 600;
+    cursor: pointer; /* เป็นรูปมือชี้เวลานำเมาส์ไปวาง */
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    display: inline-block;
+    transition: all 0.2s;
+}
+.ward-phone:hover {
+    background: rgba(255, 255, 255, 0.6);
+    transform: scale(1.05);
+}
+
+/* เปลี่ยนสีเบอร์โทรให้เข้ากับธีมเมื่อมียาเย็น */
+.ward-card.has-cold-med .ward-phone {
+    color: #854d0e;
+    border-color: rgba(133, 77, 14, 0.2);
+}
+
+/* สถานะ "โทรแจ้งแล้ว" (เมื่อคลิกที่เบอร์โทร กรอบการ์ดจะแดง) */
+.ward-card.called-ward {
+    border: 3px solid #ef4444 !important; /* กรอบสีแดงหนา */
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4) !important; /* เรืองแสงสีแดงอ่อนๆ */
+}
+.ward-card.called-ward .ward-phone {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #f87171;
+}
+
+/* -------------------------------------
+   การจัดลำดับความสำคัญ (รับยาแล้ว ทับทุกสิ่ง)
+-------------------------------------- */
+/* 3. สถานะ "รับยาแล้ว" (Completed) - ต้องมีความสำคัญสูงสุด ทับสีเหลืองและกรอบแดงให้เป็นปกติ */
 .ward-card.completed {
     background: white !important;
-    border-color: white !important;
+    border: 2px solid white !important; /* ล้างกรอบแดงและเหลืองทิ้ง */
     box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
 }
 .ward-card.completed h3 { color: var(--primary-color) !important; }
@@ -258,21 +301,6 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
 /* 4. ถ้ารับยาไปแล้ว ให้ซ่อนปุ่มยาเย็นทิ้งไปเลย เพื่อความคลีน */
 .ward-card.completed .cold-btn {
     display: none !important;
-}
-
-/* -------------------------------------
-   ส่วนเสริม: เบอร์โทรศัพท์ประจำวอร์ด
--------------------------------------- */
-.ward-phone {
-    font-size: 0.9rem;
-    color: var(--text-dark);
-    opacity: 0.7;
-    margin-top: 5px;
-    font-weight: 500;
-}
-/* เปลี่ยนสีเบอร์โทรให้เข้ากับธีมยาเย็นเมื่อถูกกด */
-.ward-card.has-cold-med .ward-phone {
-    color: #854d0e;
 }
 
 @media (min-width: 600px) {
