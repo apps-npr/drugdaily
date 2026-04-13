@@ -2,7 +2,6 @@ const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzgpd3
 
 const wards = [ "MICU", "CCU", "Med พิเศษเดี่ยวชั้น 14", "Med พิเศษรวมชั้น 12", "Med ส.ชาย ชั้น 11", "SEMI ชาย ชั้น 11", "SEMI หญิง ชั้น 10", "Stroke unit ชั้น 10", "อายุรกรรม หญิง ชั้น 10", "OBS ER", "ER med ชั้น 8", "AIIR" ];
 
-// ข้อมูลเบอร์โทรศัพท์ที่อัปเดตล่าสุด
 const wardPhones = {
     "อายุรกรรม หญิง ชั้น 10": "81020",
     "Med ส.ชาย ชั้น 11": "81115",
@@ -20,11 +19,11 @@ const wardPhones = {
 
 const pharmacists = [ "ภญ.เสาวภา ศิริกาญจน์ (แอน)", "ภญ.อรรถยา เปล่งสงวน (พี่แจน)", "ภญ.กนกพร ชูริกาวิทย์ (ใหม่)", "ภญ.รัตติยาพร แก้วสุ (แยม)", "ภญ.สุชญา ประเสริฐปั้น(ใบหม่อน)", "ภญ.วรางค์รัตน์ สุวรรณชาตรี (ตา)", "ภญ.จิราพร คำแก้ว (โอ๋)", "ภญ.ชญานิน กำลัง (ไหม)", "ภก.วีรพัชร พานทอง (กระต๊อบ)", "ภก.ธนณัฏฐ์ แสงอังคนาวิน (แบงค์)", "ภญ.สุกัลยา ยิตนรดิน (พี่สุ)", "ภญ.กนกกช บุศย์น้ำเพชร (พี่บีบ)", "ภญ.วราภรณ์ แสงวิเชียร (พี่ตุ๊ก)", "ภญ.ศุภานันท์ ปิงเจริญกิจกุล (โบว์)", "ภญ.ศศิธร มามีชัย (พี่กุ้ง)", "ภญ.อาทิตยา วงศาโรจน์ (พี่เก๋)", "ภญ.ปนัดดา ชูเย็น (ดิว)", "ภญ.ปัญญภรณ์ ทรงสุนทรวงศ์", "ภญ.ดาริกา อนุรักษ์ชนะพล (กุ๊ก)", "ภญ.อัชฌา เหมะจันทร (พี่ปลา)", "ภก.เทพนรินทร์ ช่างประเสริฐ", "ภญ.พรทิพย์ วรนัยพินิจ", "ภญ.วรมน พิเชียรโสภณ (แพร)", "ภญ.อัจฉรา ภัทรสมสกุล (อุ๊)", "ภก.สุทธิเกียรติ สำเภา (สุท)", "ภญ.จุติพร ร่วมใจ (จอย)", "ภญ.ชนม์นิภา กุมภคาม (ชนม์)", "ภก.ปัณณวิชญ์ เรืองพัฒนโกศล (ตีโต้)", "ภญ.ธนภรณ์ ล้อมมหาดไทย (อุ้ม)", "ภญ.นลินรัตน์ ลิ่วศรีวิไล (แพร)", "ภญ.ชนิดาภา ตันตินิยงคกุล (มิว)", "ภญ.แพรพลอย ดรุณวัติ", "ภก.กันตพงศ์ วงศ์เอกเกษม (ซัน)", "ภญ.ลลิตา แย้มสุริโยทัย (แจน)", "ภญ.มัญชุพร ยมศิริ (หมิว)", "ภญ.ภัทรานิษฐ์ หวังมีสรี (น้ำ)", "ภก.ฐาปกรณ์ เบี้ยกระโทก (ปป)", "ภญ.ธารญา โกฉัยพัฒน์ (พัชชา)", "ภก.วันเฉลิม มีมูซอ (อาร์ม)", "ภก.วิศรุต สมบูรณ์วงศ์ (มาร์ค)", "ภญ.ธนัชพร ชัยวัฒนกุล(นัท)" ];
 
-// เพิ่ม calledWards เพื่อจำสถานะว่าโทรตามวอร์ดไหนไปแล้วบ้าง
 let state = { pharmacist: "", startTime: null, endTime: null, wardData: {}, coldMeds: {}, calledWards: {} };
 let dashboardRawData = []; 
 let trendChartInstance = null;
 let peakHourChartInstance = null;
+let midnightTimer = null; // ตัวแปรสำหรับจับเวลาเที่ยงคืน
 
 const elDate = document.getElementById('currentDate');
 const elSelect = document.getElementById('pharmacistSelect');
@@ -46,10 +45,74 @@ function init() {
     if (saved) {
         state = JSON.parse(saved);
         if (!state.coldMeds) state.coldMeds = {};
-        if (!state.calledWards) state.calledWards = {}; // ป้องกันแคชเก่าไม่มีค่านี้
-        if (state.pharmacist && state.startTime && !state.endTime) renderWorkUI();
+        if (!state.calledWards) state.calledWards = {};
+        
+        if (state.pharmacist && state.startTime && !state.endTime) {
+            // ระบบตรวจสอบการข้ามวัน (ถ้าเปิดเว็บมาแล้วพบว่าเวรถูกเริ่มตั้งแต่เมื่อวาน)
+            const shiftDate = new Date(state.startTime).toDateString();
+            const today = new Date().toDateString();
+            
+            if (shiftDate !== today) {
+                // บังคับจบเวรของเมื่อวานอัตโนมัติทันที
+                autoFinalizeShift();
+            } else {
+                renderWorkUI();
+                setupMidnightTimer(); // เริ่มจับเวลาเที่ยงคืน
+            }
+        }
     }
 }
+
+// ฟังก์ชันบังคับจบเวรอัตโนมัติ (ใส่ 23:59 ให้วอร์ดที่เหลือ และส่งข้อมูล)
+async function autoFinalizeShift() {
+    // โชว์หน้าจอโหลดทับเพื่อไม่ให้คนสับสน
+    document.body.innerHTML = '<div style="display:flex; height:100vh; align-items:center; justify-content:center; background:linear-gradient(135deg, #00F260 0%, #0575E6 100%);"><h2 style="color:white; text-align:center; font-family:Kanit, sans-serif; background:rgba(255,255,255,0.2); padding:30px; border-radius:20px; backdrop-filter:blur(10px); box-shadow:0 8px 32px rgba(0,0,0,0.1);">⏳ ตรวจพบว่าข้ามวันแล้ว<br>กำลังบันทึกและเคลียร์เวรของเมื่อวานอัตโนมัติ...</h2></div>';
+    
+    // วอร์ดไหนยังไม่มารับ ให้เติม '23:59' ลงไป
+    wards.forEach(w => {
+        if (!state.wardData[w]) {
+            state.wardData[w] = '23:59';
+        }
+    });
+
+    const payload = {
+        date: new Date(state.startTime).toLocaleDateString('th-TH'),
+        pharmacist: state.pharmacist,
+        startTime: new Date(state.startTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+        endTime: '23:59',
+        wardData: JSON.stringify(state.wardData)
+    };
+
+    try {
+        await fetch(GOOGLE_SHEET_WEB_APP_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    } catch (error) {}
+    
+    // เคลียร์ข้อมูลและรีเฟรชกลับสู่หน้าเริ่มงานปกติ
+    localStorage.removeItem('shiftState');
+    location.reload();
+}
+
+// ตั้งเวลาให้ฟังก์ชัน autoFinalizeShift() ทำงานตอนเที่ยงคืนเป๊ะๆ
+function setupMidnightTimer() {
+    if(midnightTimer) clearTimeout(midnightTimer);
+    
+    const now = new Date();
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0); // ตั้งเป็น 00:00:00 ของวันพรุ่งนี้
+    
+    const msUntilMidnight = midnight - now; // เวลาที่เหลือจนถึงเที่ยงคืน (มิลลิวินาที)
+    
+    midnightTimer = setTimeout(() => {
+        autoFinalizeShift();
+    }, msUntilMidnight);
+}
+
+// บันทึกข้อมูลลงเครื่องอัตโนมัติทุกๆ 30 นาที เพื่อความอุ่นใจ (จริงๆ ระบบเซฟทุกการคลิกอยู่แล้ว)
+setInterval(() => {
+    if (state.pharmacist && state.startTime && !state.endTime) {
+        saveState();
+    }
+}, 30 * 60 * 1000); 
 
 function saveState() { localStorage.setItem('shiftState', JSON.stringify(state)); }
 
@@ -59,17 +122,12 @@ function renderWards() {
         const card = document.createElement('div');
         card.className = 'ward-card';
         
-        // 1. เช็คสถานะ ยาเย็น (เปลี่ยนการ์ดเป็นสีเหลือง)
         if (state.coldMeds && state.coldMeds[ward]) {
             card.classList.add('has-cold-med');
         }
-        
-        // 2. เช็คสถานะ โทรแจ้งแล้ว (เพิ่มกรอบสีแดง)
         if (state.calledWards && state.calledWards[ward]) {
             card.classList.add('called-ward');
         }
-
-        // 3. เช็คสถานะ รับยาแล้ว (เปลี่ยนการ์ดเป็นสีขาว+เขียว ทับ 2 สถานะแรก)
         if (state.wardData[ward]) {
             card.classList.add('completed');
         }
@@ -80,24 +138,20 @@ function renderWards() {
         timeStr.className = 'time-stamp';
         timeStr.innerText = state.wardData[ward] ? `✔️ รับยาแล้ว` : 'รอรับยา';
 
-        // ปุ่มเบอร์โทรศัพท์
         const phoneStr = document.createElement('div');
         phoneStr.className = 'ward-phone';
         phoneStr.innerText = `📞 ${wardPhones[ward] || '-'}`;
         
-        // Event ตอนกดเบอร์โทรศัพท์
         phoneStr.addEventListener('click', (e) => {
-            e.stopPropagation(); // ไม่ให้คลิกทะลุไปโดน Event ของการ์ดหลัก
+            e.stopPropagation();
             if (!state.endTime && !state.wardData[ward]) {
                 if (!state.calledWards) state.calledWards = {};
-                // สลับสถานะโทรแล้ว
                 state.calledWards[ward] = !state.calledWards[ward];
                 saveState();
                 renderWards();
             }
         });
 
-        // ปุ่มยาเย็น
         const coldBtn = document.createElement('button');
         coldBtn.className = 'cold-btn';
         coldBtn.innerHTML = (state.coldMeds && state.coldMeds[ward]) ? '❄️ มียาเย็น' : '➕ มียาเย็น';
@@ -112,7 +166,6 @@ function renderWards() {
             }
         });
 
-        // Event ตอนกดการ์ดหลัก (เพื่อลงเวลาว่ารับยาแล้ว)
         card.addEventListener('click', () => {
             if (!state.endTime) {
                 if (!state.wardData[ward]) {
@@ -148,14 +201,17 @@ btnStart.addEventListener('click', () => {
     state.endTime = null; 
     state.wardData = {};
     state.coldMeds = {}; 
-    state.calledWards = {}; // เคลียร์สถานะการโทรเมื่อเริ่มงานใหม่
-    saveState(); renderWorkUI();
+    state.calledWards = {}; 
+    saveState(); 
+    renderWorkUI();
+    setupMidnightTimer(); // จับเวลาเที่ยงคืนเมื่อเริ่มงาน
 });
 
 btnEnd.addEventListener('click', async () => {
     if(confirm("ยืนยันจบเวรและบันทึกข้อมูล?")) {
         state.endTime = new Date().toISOString();
         saveState();
+        if(midnightTimer) clearTimeout(midnightTimer); // ยกเลิกการจับเวลาเที่ยงคืนเพราะกดจบงานเองแล้ว
         
         const syncStatus = document.getElementById('syncStatus');
         syncStatus.innerText = "⏳ กำลังบันทึกข้อมูล...";
