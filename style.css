@@ -202,7 +202,7 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
 
 
 /* -------------------------------------
-   ส่วนเสริม: สถานะ "ยาเย็น" (หน้างาน)
+   ส่วนเสริม: สถานะ "ยาเย็น" (หน้างาน) สีฟ้า
 -------------------------------------- */
 /* 1. ปุ่มยาเย็น (ก่อนกด) - ปรับให้ซอฟต์ลง เป็นแค่เส้นประบางๆ ไม่แย่งซีนชื่อวอร์ด */
 .cold-btn {
@@ -227,25 +227,26 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
     background: rgba(255, 255, 255, 0.4);
 }
 
-/* 2. เมื่อกดปุ่มยาเย็นแล้ว - การ์ดจะเปลี่ยนเป็นสีเหลืองเด่นชัด */
+/* 2. เมื่อกดปุ่มยาเย็นแล้ว - เปลี่ยนเป็นสีฟ้า (Blue Theme) */
 .ward-card.has-cold-med {
-    background: #fef08a !important; 
-    border: 2px solid #facc15 !important;
-    box-shadow: 0 4px 15px rgba(250, 204, 21, 0.4) !important;
+    background: #dbeafe !important; /* พื้นหลังสีฟ้าอ่อน */
+    border: 2px solid #60a5fa !important; /* ขอบสีฟ้า */
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3) !important;
 }
-.ward-card.has-cold-med h3 { color: #854d0e !important; }
+.ward-card.has-cold-med h3 { color: #1e3a8a !important; /* ตัวหนังสือสีน้ำเงินเข้ม */ }
 .ward-card.has-cold-med .time-stamp {
     background: rgba(255, 255, 255, 0.8) !important;
-    color: #854d0e !important;
+    color: #1e3a8a !important;
     font-weight: 600;
 }
 .ward-card.has-cold-med .cold-btn {
-    background: #eab308;
-    border: 1px solid #ca8a04;
+    background: #3b82f6; /* ปุ่มสีฟ้าเข้ม */
+    border: 1px solid #2563eb;
     color: white;
     opacity: 1;
     font-weight: 600;
 }
+
 
 /* -------------------------------------
    ส่วนเสริม: เบอร์โทรศัพท์ประจำวอร์ด & สถานะ "โทรแจ้งแล้ว"
@@ -269,10 +270,10 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
     transform: scale(1.05);
 }
 
-/* เปลี่ยนสีเบอร์โทรให้เข้ากับธีมเมื่อมียาเย็น */
+/* เปลี่ยนสีเบอร์โทรให้เข้ากับธีมยาเย็นสีฟ้าเมื่อถูกกด */
 .ward-card.has-cold-med .ward-phone {
-    color: #854d0e;
-    border-color: rgba(133, 77, 14, 0.2);
+    color: #1e3a8a;
+    border-color: rgba(30, 58, 138, 0.2);
 }
 
 /* สถานะ "โทรแจ้งแล้ว" (เมื่อคลิกที่เบอร์โทร กรอบการ์ดจะแดง) */
@@ -289,7 +290,7 @@ main { padding: 0 15px; max-width: 800px; margin: auto; }
 /* -------------------------------------
    การจัดลำดับความสำคัญ (รับยาแล้ว ทับทุกสิ่ง)
 -------------------------------------- */
-/* 3. สถานะ "รับยาแล้ว" (Completed) - ต้องมีความสำคัญสูงสุด ทับสีเหลืองและกรอบแดงให้เป็นปกติ */
+/* 3. สถานะ "รับยาแล้ว" (Completed) - ต้องมีความสำคัญสูงสุด ทับสีเหลือง(ฟ้า)และกรอบแดงให้เป็นปกติ */
 .ward-card.completed {
     background: white !important;
     border: 2px solid white !important; /* ล้างกรอบแดงและเหลืองทิ้ง */
