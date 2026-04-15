@@ -57,7 +57,7 @@ body {
 }
 .glass-header h1 { margin: 0; font-size: 1.5rem; font-weight: 500; }
 
-main { padding: 0 15px; max-width: 800px; margin: auto; }
+main { padding: 0 15px; max-width: 1200px; margin: auto; }
 
 .glass-card {
     background: var(--glass-bg);
