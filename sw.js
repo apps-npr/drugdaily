@@ -1,4 +1,4 @@
-const CACHE_NAME = 'drugdaily-static-v1';
+const CACHE_NAME = 'drugdaily-static-v2';
 const PRECACHE = [
   './',
   './index.html',
