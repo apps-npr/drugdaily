@@ -6,8 +6,10 @@
     <title>ระบบเช็คชื่อรับยาประจำวัน</title>
 
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="icon-192.png">
-    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <meta name="theme-color" content="#0575E6">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -158,6 +160,18 @@
     </main>
 
     <div id="pharmacistBadge" class="glass-badge hidden"><span id="badgeName"></span></div>
+
+    <div id="appModal" class="app-modal hidden" role="dialog" aria-modal="true" aria-labelledby="appModalTitle">
+        <div class="app-modal-backdrop" id="appModalBackdrop"></div>
+        <div class="app-modal-card" role="document">
+            <h3 id="appModalTitle">ยืนยัน</h3>
+            <div id="appModalBody" class="app-modal-body"></div>
+            <div class="app-modal-actions">
+                <button type="button" id="appModalCancel" class="glass-btn outline">ยกเลิก</button>
+                <button type="button" id="appModalOk" class="glass-btn primary">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
     <script src="script.js"></script>
 </body>
 </html>
