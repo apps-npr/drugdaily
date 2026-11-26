@@ -1,11 +1,12 @@
 const GOOGLE_SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzgpd3F4STzP210MfJcsQRHwZnLRLjp82w3sD7Efu2mNnyZ6h8dVE96j8TLGcp6YoDfMg/exec"; 
 
-const wards = [ "MICU", "CCU", "Med พิเศษเดี่ยวชั้น 14", "Med พิเศษรวมชั้น 12", "Med ส.ชาย ชั้น 11", "SEMI ชาย ชั้น 11", "SEMI หญิง ชั้น 10", "Stroke unit ชั้น 10", "อายุรกรรม หญิง ชั้น 10", "OBS ER", "ER med ชั้น 8", "AIIR" ];
+const wards = [ "MICU", "CCU", "Med พิเศษเดี่ยวชั้น 14", "Med พิเศษรวมชั้น 12", "Med ส.ชาย ชั้น 11", "SEMI ชาย ชั้น 11", "SEMI หญิง ชั้น 10", "Stroke unit ชั้น 10", "อายุรกรรม หญิง ชั้น 10", "OBS ER", "OBS ER ช.11", "ER med ชั้น 8", "AIIR" ];
 
 const wardPhones = {
     "อายุรกรรม หญิง ชั้น 10": "81020",
     "Med ส.ชาย ชั้น 11": "81115",
     "OBS ER": "80110",
+    "OBS ER ช.11": "81120",
     "ER med ชั้น 8": "80809",
     "Stroke unit ชั้น 10": "81015",
     "SEMI ชาย ชั้น 11": "81105",
@@ -24,13 +25,50 @@ let dashboardRawData = [];
 let trendChartInstance = null;
 let peakHourChartInstance = null;
 let midnightTimer = null; // ตัวแปรสำหรับจับเวลาเที่ยงคืน
+let compactMode = localStorage.getItem('compactMode') === '1';
+let deferredInstallPrompt = null;
 
 const elDate = document.getElementById('currentDate');
 const elSelect = document.getElementById('pharmacistSelect');
 const dashSelectPhar = document.getElementById('dashFilterPharmacist');
 const btnStart = document.getElementById('startShiftBtn');
 const btnEnd = document.getElementById('endShiftBtn');
+const btnCompact = document.getElementById('compactModeBtn');
 const wardGrid = document.getElementById('wardGrid');
+
+function isChecked(ward) { return !!(state.wardData && state.wardData[ward]); }
+function isCold(ward) { return !!(state.coldMeds && state.coldMeds[ward]); }
+function isCalled(ward) { return !!(state.calledWards && state.calledWards[ward]); }
+
+/** ลำดับการ์ด: รับยาแล้ว+ยาเย็น, รับยาแล้ว, รอรับ+ยาเย็น, รอรับ — คงลำดับเดิมในกลุ่มเดียวกัน */
+function wardSortKey(ward) {
+    const checked = isChecked(ward);
+    const cold = isCold(ward);
+    if (checked && cold) return 0;
+    if (checked) return 1;
+    if (cold) return 2;
+    return 3;
+}
+
+function sortedWards() {
+    return wards
+        .map((ward, index) => ({ ward, index }))
+        .sort((a, b) => {
+            const diff = wardSortKey(a.ward) - wardSortKey(b.ward);
+            return diff !== 0 ? diff : a.index - b.index;
+        })
+        .map((item) => item.ward);
+}
+
+function applyCompactMode() {
+    document.body.classList.toggle('compact-mode', compactMode);
+    if (btnCompact) {
+        btnCompact.textContent = compactMode ? 'โหมดเต็ม' : 'โหมดย่อ';
+        btnCompact.classList.toggle('active-toggle', compactMode);
+    }
+    const hint = document.getElementById('compactHint');
+    if (hint) hint.classList.toggle('hidden', !compactMode);
+}
 
 function init() {
     const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', era: 'short' }).replace('พ.ศ.', 'พ.ศ. ');
@@ -40,6 +78,9 @@ function init() {
         elSelect.add(new Option(name, name));
         dashSelectPhar.add(new Option(name, name));
     });
+
+    applyCompactMode();
+    setupPwaInstall();
 
     const saved = localStorage.getItem('shiftState');
     if (saved) {
@@ -116,27 +157,85 @@ setInterval(() => {
 
 function saveState() { localStorage.setItem('shiftState', JSON.stringify(state)); }
 
+function captureCardPositions() {
+    const map = {};
+    [...wardGrid.children].forEach((el) => {
+        if (!el.dataset.ward) return;
+        map[el.dataset.ward] = el.getBoundingClientRect();
+    });
+    return map;
+}
+
+function animateCardMoves(prev) {
+    if (!prev || !Object.keys(prev).length) return;
+    [...wardGrid.children].forEach((el) => {
+        const old = prev[el.dataset.ward];
+        if (!old) return;
+        const now = el.getBoundingClientRect();
+        const dx = old.left - now.left;
+        const dy = old.top - now.top;
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+        el.style.transition = 'none';
+        el.style.transform = `translate(${dx}px, ${dy}px)`;
+        requestAnimationFrame(() => {
+            el.style.transition = 'transform 0.28s ease';
+            el.style.transform = '';
+        });
+    });
+}
+
+function toggleReceived(ward) {
+    if (state.endTime) return;
+    if (!state.wardData[ward]) {
+        state.wardData[ward] = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    } else {
+        delete state.wardData[ward];
+    }
+    saveState();
+    renderWards();
+}
+
+function toggleCold(ward) {
+    if (state.endTime) return;
+    if (!state.coldMeds) state.coldMeds = {};
+    state.coldMeds[ward] = !state.coldMeds[ward];
+    saveState();
+    renderWards();
+}
+
+function toggleCalled(ward) {
+    if (state.endTime) return;
+    if (!state.calledWards) state.calledWards = {};
+    state.calledWards[ward] = !state.calledWards[ward];
+    saveState();
+    renderWards();
+}
+
 function renderWards() {
+    const prev = captureCardPositions();
     wardGrid.innerHTML = "";
-    wards.forEach(ward => {
+    sortedWards().forEach(ward => {
         const card = document.createElement('div');
         card.className = 'ward-card';
+        card.dataset.ward = ward;
+        card.dataset.checked = isChecked(ward) ? '1' : '0';
+        card.dataset.cold = isCold(ward) ? '1' : '0';
+        card.dataset.called = isCalled(ward) ? '1' : '0';
         
-        if (state.coldMeds && state.coldMeds[ward]) {
-            card.classList.add('has-cold-med');
-        }
-        if (state.calledWards && state.calledWards[ward]) {
-            card.classList.add('called-ward');
-        }
-        if (state.wardData[ward]) {
-            card.classList.add('completed');
-        }
+        if (isCold(ward)) card.classList.add('has-cold-med');
+        if (isCalled(ward)) card.classList.add('called-ward');
+        if (isChecked(ward)) card.classList.add('completed');
+
+        const checkMark = document.createElement('span');
+        checkMark.className = 'compact-check';
+        checkMark.textContent = '✔';
+        checkMark.setAttribute('aria-hidden', 'true');
 
         const title = document.createElement('h3'); title.innerText = ward;
         
         const timeStr = document.createElement('div');
         timeStr.className = 'time-stamp';
-        timeStr.innerText = state.wardData[ward] ? `✔️ รับยาแล้ว` : 'รอรับยา';
+        timeStr.innerText = isChecked(ward) ? `✔️ ${state.wardData[ward]}` : 'รอรับยา';
 
         const phoneStr = document.createElement('div');
         phoneStr.className = 'ward-phone';
@@ -144,39 +243,61 @@ function renderWards() {
         
         phoneStr.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (!state.endTime && !state.wardData[ward]) {
-                if (!state.calledWards) state.calledWards = {};
-                state.calledWards[ward] = !state.calledWards[ward];
-                saveState();
-                renderWards();
-            }
+            if (!state.endTime) toggleCalled(ward);
         });
 
         const coldBtn = document.createElement('button');
+        coldBtn.type = 'button';
         coldBtn.className = 'cold-btn';
-        coldBtn.innerHTML = (state.coldMeds && state.coldMeds[ward]) ? '❄️ มียาเย็น' : '➕ มียาเย็น';
+        coldBtn.innerHTML = isCold(ward) ? '❄️ มียาเย็น' : '➕ มียาเย็น';
         
         coldBtn.addEventListener('click', (e) => {
             e.stopPropagation(); 
-            if (!state.endTime && !state.wardData[ward]) {
-                if (!state.coldMeds) state.coldMeds = {};
-                state.coldMeds[ward] = !state.coldMeds[ward];
-                saveState();
-                renderWards();
-            }
+            toggleCold(ward);
         });
 
-        card.addEventListener('click', () => {
-            if (!state.endTime) {
-                if (!state.wardData[ward]) {
-                    state.wardData[ward] = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-                } else {
-                    delete state.wardData[ward];
-                }
-                saveState(); renderWards();
+        const compactColdBtn = document.createElement('button');
+        compactColdBtn.type = 'button';
+        compactColdBtn.className = 'compact-cold-btn';
+        compactColdBtn.title = 'มียาเย็น';
+        compactColdBtn.setAttribute('aria-label', `ยาเย็น ${ward}`);
+        compactColdBtn.textContent = '❄️';
+        compactColdBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleCold(ward);
+        });
+
+        // โหมดย่อ: กดค้างเพื่อสลับสถานะโทรแจ้งแล้ว
+        let pressTimer = null;
+        let longPressed = false;
+        const startPress = (e) => {
+            if (e.target.closest('.compact-cold-btn, .cold-btn, .ward-phone')) return;
+            longPressed = false;
+            pressTimer = setTimeout(() => {
+                longPressed = true;
+                toggleCalled(ward);
+            }, 550);
+        };
+        const cancelPress = () => {
+            if (pressTimer) clearTimeout(pressTimer);
+            pressTimer = null;
+        };
+        card.addEventListener('pointerdown', startPress);
+        card.addEventListener('pointerup', cancelPress);
+        card.addEventListener('pointerleave', cancelPress);
+        card.addEventListener('pointercancel', cancelPress);
+
+        card.addEventListener('click', (e) => {
+            if (e.target.closest('.compact-cold-btn, .cold-btn, .ward-phone')) return;
+            if (longPressed) {
+                longPressed = false;
+                return;
             }
+            toggleReceived(ward);
         });
         
+        card.appendChild(checkMark);
+        card.appendChild(compactColdBtn);
         card.appendChild(title); 
         card.appendChild(timeStr);
         card.appendChild(phoneStr);
@@ -184,6 +305,7 @@ function renderWards() {
         
         wardGrid.appendChild(card);
     });
+    animateCardMoves(prev);
 }
 
 function renderWorkUI() {
@@ -191,7 +313,17 @@ function renderWorkUI() {
     document.getElementById('workSection').classList.remove('hidden');
     document.getElementById('pharmacistBadge').classList.remove('hidden');
     document.getElementById('badgeName').innerText = `ผู้ปฏิบัติงาน ${state.pharmacist.split(' ')[0]}`;
+    applyCompactMode();
     renderWards();
+}
+
+if (btnCompact) {
+    btnCompact.addEventListener('click', () => {
+        compactMode = !compactMode;
+        localStorage.setItem('compactMode', compactMode ? '1' : '0');
+        applyCompactMode();
+        renderWards();
+    });
 }
 
 btnStart.addEventListener('click', () => {
@@ -232,6 +364,47 @@ btnEnd.addEventListener('click', async () => {
             syncStatus.innerText = "❌ บันทึกไม่สำเร็จ โปรดลองใหม่";
         }
     }
+});
+
+function setupPwaInstall() {
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+
+    const installBtn = document.getElementById('installAppBtn');
+    const iosHint = document.getElementById('iosInstallHint');
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        if (installBtn && !isStandalone) installBtn.classList.remove('hidden');
+    });
+
+    if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+            if (!deferredInstallPrompt) return;
+            deferredInstallPrompt.prompt();
+            await deferredInstallPrompt.userChoice.catch(() => {});
+            deferredInstallPrompt = null;
+            installBtn.classList.add('hidden');
+        });
+    }
+
+    if (iosHint && isIos && !isStandalone) {
+        iosHint.classList.remove('hidden');
+    }
+
+    window.addEventListener('appinstalled', () => {
+        if (installBtn) installBtn.classList.add('hidden');
+        deferredInstallPrompt = null;
+    });
+}
+
+
+document.getElementById('adminPass').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('loginBtn').click();
 });
 
 /* ================= Dashboard Admin & Stats ================= */
