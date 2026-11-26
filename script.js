@@ -326,8 +326,109 @@ if (btnCompact) {
     });
 }
 
-btnStart.addEventListener('click', () => {
-    if (!elSelect.value) return alert("กรุณาเลือกชื่อเภสัชกรครับ");
+
+/* ================= Styled modal (แทน alert / confirm) ================= */
+function showAppModal({ title, bodyHtml, confirmText = 'ตกลง', cancelText = null, danger = false }) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('appModal');
+        const titleEl = document.getElementById('appModalTitle');
+        const bodyEl = document.getElementById('appModalBody');
+        const okBtn = document.getElementById('appModalOk');
+        const cancelBtn = document.getElementById('appModalCancel');
+        const backdrop = document.getElementById('appModalBackdrop');
+        if (!modal || !okBtn) {
+            resolve(!cancelText);
+            return;
+        }
+
+        titleEl.textContent = title || '';
+        bodyEl.innerHTML = bodyHtml || '';
+        okBtn.textContent = confirmText;
+        okBtn.className = 'glass-btn ' + (danger ? 'danger' : 'primary');
+        okBtn.style.background = danger ? '#ef4444' : '#10b981';
+        okBtn.style.color = '#fff';
+        okBtn.style.boxShadow = danger ? '0 4px 14px rgba(239, 68, 68, 0.35)' : '0 4px 14px rgba(16, 185, 129, 0.35)';
+        if (cancelText) {
+            cancelBtn.textContent = cancelText;
+            cancelBtn.classList.remove('hidden');
+        } else {
+            cancelBtn.classList.add('hidden');
+        }
+
+        const finish = (value) => {
+            modal.classList.add('hidden');
+            document.body.classList.remove('modal-open');
+            okBtn.removeEventListener('click', onOk);
+            cancelBtn.removeEventListener('click', onCancel);
+            if (backdrop) backdrop.removeEventListener('click', onCancel);
+            document.removeEventListener('keydown', onKey);
+            resolve(value);
+        };
+        const onOk = () => finish(true);
+        const onCancel = () => finish(false);
+        const onKey = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                finish(cancelText ? false : true);
+            } else if (e.key === 'Enter' && e.target === okBtn) {
+                onOk();
+            }
+        };
+
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        if (backdrop) backdrop.addEventListener('click', onCancel);
+        document.addEventListener('keydown', onKey);
+
+        modal.classList.remove('hidden');
+        document.body.classList.add('modal-open');
+        requestAnimationFrame(() => okBtn.focus());
+    });
+}
+
+function showAlert(message, title = 'แจ้งเตือน') {
+    const body = (message || '').startsWith('<') ? message : `<p>${message}</p>`;
+    return showAppModal({ title, bodyHtml: body, confirmText: 'ตกลง' });
+}
+
+function showConfirm(message, title = 'ยืนยัน', options = {}) {
+    const body = (message || '').startsWith('<') ? message : `<p>${message}</p>`;
+    return showAppModal({
+        title,
+        bodyHtml: body,
+        confirmText: options.confirmText || 'ยืนยัน',
+        cancelText: options.cancelText || 'ยกเลิก',
+        danger: options.danger !== false
+    });
+}
+
+function shiftSummaryHtml() {
+    const received = wards.filter((w) => isChecked(w)).length;
+    const pending = wards.length - received;
+    const cold = wards.filter((w) => isCold(w)).length;
+    return `
+        <p>ยืนยันจบเวรและบันทึกข้อมูลหรือไม่ครับ</p>
+        <div class="app-modal-summary">
+            <div class="app-modal-stat">
+                <span class="num">${received}</span>
+                <span class="lbl">รับยาแล้ว</span>
+            </div>
+            <div class="app-modal-stat warn">
+                <span class="num">${pending}</span>
+                <span class="lbl">ยังไม่มารับ</span>
+            </div>
+            <div class="app-modal-stat cold">
+                <span class="num">${cold}</span>
+                <span class="lbl">มียาเย็น</span>
+            </div>
+        </div>`;
+}
+
+btnStart.addEventListener('click', async () => {
+    if (!elSelect.value) {
+        await showAlert('กรุณาเลือกชื่อเภสัชกรครับ');
+        return;
+    }
     state.pharmacist = elSelect.value;
     state.startTime = new Date().toISOString();
     state.endTime = null; 
@@ -340,29 +441,36 @@ btnStart.addEventListener('click', () => {
 });
 
 btnEnd.addEventListener('click', async () => {
-    if(confirm("ยืนยันจบเวรและบันทึกข้อมูล?")) {
-        state.endTime = new Date().toISOString();
+    const ok = await showConfirm(shiftSummaryHtml(), 'ยืนยันจบเวรและบันทึก', { danger: true });
+    if (!ok) return;
+
+    state.endTime = new Date().toISOString();
+    saveState();
+    if(midnightTimer) clearTimeout(midnightTimer); // ยกเลิกการจับเวลาเที่ยงคืนเพราะกดจบงานเองแล้ว
+    
+    const syncStatus = document.getElementById('syncStatus');
+    syncStatus.innerText = "⏳ กำลังบันทึกข้อมูล...";
+
+    const payload = {
+        date: new Date().toLocaleDateString('th-TH'),
+        pharmacist: state.pharmacist,
+        startTime: new Date(state.startTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+        endTime: new Date(state.endTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+        wardData: JSON.stringify(state.wardData)
+    };
+
+    try {
+        await fetch(GOOGLE_SHEET_WEB_APP_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        syncStatus.innerText = "✅ บันทึกสำเร็จ!";
+        await showAlert('<p>บันทึกข้อมูลเรียบร้อยแล้วครับ</p>', 'บันทึกสำเร็จ');
+        localStorage.removeItem('shiftState');
+        location.reload();
+    } catch (error) {
+        syncStatus.innerText = "❌ บันทึกไม่สำเร็จ โปรดลองใหม่";
+        await showAlert('<p>บันทึกไม่สำเร็จ โปรดลองใหม่อีกครั้งครับ<br>ข้อมูลเวรในเครื่องยังอยู่ ไม่ได้ถูกลบ</p>', 'บันทึกไม่สำเร็จ');
+        state.endTime = null;
         saveState();
-        if(midnightTimer) clearTimeout(midnightTimer); // ยกเลิกการจับเวลาเที่ยงคืนเพราะกดจบงานเองแล้ว
-        
-        const syncStatus = document.getElementById('syncStatus');
-        syncStatus.innerText = "⏳ กำลังบันทึกข้อมูล...";
-
-        const payload = {
-            date: new Date().toLocaleDateString('th-TH'),
-            pharmacist: state.pharmacist,
-            startTime: new Date(state.startTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
-            endTime: new Date(state.endTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
-            wardData: JSON.stringify(state.wardData)
-        };
-
-        try {
-            await fetch(GOOGLE_SHEET_WEB_APP_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            syncStatus.innerText = "✅ บันทึกสำเร็จ!";
-            setTimeout(() => { localStorage.removeItem('shiftState'); location.reload(); }, 2000);
-        } catch (error) {
-            syncStatus.innerText = "❌ บันทึกไม่สำเร็จ โปรดลองใหม่";
-        }
+        if (typeof setupMidnightTimer === 'function') setupMidnightTimer();
     }
 });
 
@@ -442,7 +550,10 @@ btnTabDaily.addEventListener('click', () => {
 
 document.getElementById('loginBtn').addEventListener('click', async () => {
     const pass = document.getElementById('adminPass').value;
-    if(!pass) return alert("กรุณาใส่รหัสผ่าน");
+    if(!pass) {
+        await showAlert('กรุณาใส่รหัสผ่านครับ');
+        return;
+    }
     const loginStatus = document.getElementById('loginStatus');
     loginStatus.innerText = "⏳ กำลังดึงข้อมูล...";
     
@@ -455,14 +566,17 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('dashboardSection').classList.remove('hidden');
             document.getElementById('adminPass').value = '';
+            loginStatus.innerText = '';
             
             calculateDashboardStats();
             populateDailySelect();
         } else {
             loginStatus.innerText = "❌ รหัสผ่านไม่ถูกต้อง";
+            await showAlert('รหัสผ่านไม่ถูกต้องครับ', 'เข้าสู่ระบบไม่สำเร็จ');
         }
     } catch(err) {
         loginStatus.innerText = "❌ เชื่อมต่อล้มเหลว";
+        await showAlert('เชื่อมต่อไม่สำเร็จ โปรดลองใหม่อีกครั้งครับ', 'เชื่อมต่อล้มเหลว');
     }
 });
 

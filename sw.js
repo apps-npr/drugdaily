@@ -1,4 +1,4 @@
-const CACHE_NAME = 'drugdaily-static-v2';
+const CACHE_NAME = 'drugdaily-static-v3';
 const PRECACHE = [
   './',
   './index.html',
@@ -8,7 +8,11 @@ const PRECACHE = [
   './icon.png',
   './icon-192.png',
   './icon-512.png',
-  './apple-touch-icon.png'
+  './icon-192-maskable.png',
+  './icon-512-maskable.png',
+  './apple-touch-icon.png',
+  './favicon.ico',
+  './favicon-32.png'
 ];
 
 self.addEventListener('install', (event) => {
