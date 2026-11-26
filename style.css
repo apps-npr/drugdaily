@@ -1,3 +1,5 @@
+*, *::before, *::after { box-sizing: border-box; }
+
 :root {
     /* โทนสีเขียวสดใส สบายตา */
     --bg-grad-1: #00F260;
@@ -12,20 +14,40 @@
     --danger-color: #ef4444;
 }
 
+html {
+    max-width: 100%;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+}
+
 body {
     font-family: 'Kanit', sans-serif;
     background: linear-gradient(135deg, var(--bg-grad-1) 0%, var(--bg-grad-2) 100%);
     background-attachment: fixed;
     color: var(--text-dark);
-    margin: 0; padding: 0; padding-bottom: 80px;
+    margin: 0;
+    padding: 0;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
     min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    max-width: 100%;
     position: relative;
     overflow-x: hidden;
+    overscroll-behavior-x: none;
 }
 
-/* วงกลมตกแต่งพื้นหลังให้ดูมีมิติแบบแอปสมัยใหม่ */
+/* วงกลมตกแต่งพื้นหลัง คลิปไว้ในเลเยอร์ fixed เพื่อไม่ดันหน้าเว็บให้เลื่อนซ้ายขวา */
+.bg-decor {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: -1;
+}
 .bg-shape {
-    position: absolute; border-radius: 50%; filter: blur(60px); z-index: -1;
+    position: absolute; border-radius: 50%; filter: blur(60px);
+    pointer-events: none;
 }
 .shape-1 {
     width: 300px; height: 300px; background: rgba(255,255,255,0.4);
@@ -39,25 +61,33 @@ body {
 /* Utilities */
 .text-center { text-align: center; }
 .mt-20 { margin-top: 20px; }
+.mt-12 { margin-top: 12px; }
 .mb-20 { margin-bottom: 20px; }
 .p-15 { padding: 15px; }
 .hidden { display: none !important; }
-.title-text { font-weight: 600; font-size: 1.4rem; margin-bottom: 20px; color: var(--text-dark); }
+.title-text { font-weight: 600; font-size: 1.25rem; margin-bottom: 16px; color: var(--text-dark); }
 .subtitle-text { font-weight: 500; font-size: 1.2rem; margin-bottom: 10px; color: var(--text-dark); }
-.status-text { text-align: center; font-weight: bold; margin-top: 15px; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+.status-text { text-align: center; font-weight: bold; margin-top: 15px; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.2); word-break: break-word; }
 
 /* Glassmorphism Classes */
 .glass-header {
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--glass-border);
-    padding: 20px; text-align: center; color: white;
-    margin-bottom: 20px;
+    padding: 16px 12px;
+    padding-top: calc(16px + env(safe-area-inset-top, 0px));
+    text-align: center; color: white;
+    margin-bottom: 16px;
     text-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
-.glass-header h1 { margin: 0; font-size: 1.5rem; font-weight: 500; }
+.glass-header h1 { margin: 0; font-size: 1.25rem; font-weight: 500; overflow-wrap: anywhere; }
 
-main { padding: 0 15px; max-width: 1200px; margin: auto; }
+main {
+    padding: 0 12px;
+    max-width: 1200px;
+    margin: auto;
+    width: 100%;
+}
 
 .glass-card {
     background: var(--glass-bg);
@@ -65,8 +95,9 @@ main { padding: 0 15px; max-width: 1200px; margin: auto; }
     border: 1px solid var(--glass-border);
     border-radius: 24px;
     box-shadow: var(--glass-shadow);
-    padding: 25px;
-    margin-bottom: 25px;
+    padding: 16px;
+    margin-bottom: 16px;
+    max-width: 100%;
 }
 
 .glass-inner {
@@ -74,6 +105,7 @@ main { padding: 0 15px; max-width: 1200px; margin: auto; }
     border-radius: 16px;
     border: 1px solid rgba(255,255,255,0.5);
     padding: 15px;
+    max-width: 100%;
 }
 
 .glass-input {
@@ -83,8 +115,9 @@ main { padding: 0 15px; max-width: 1200px; margin: auto; }
     border-radius: 16px;
     color: var(--text-dark);
     font-family: 'Kanit', sans-serif; font-size: 1.1rem;
-    box-sizing: border-box; margin-bottom: 20px;
+    margin-bottom: 20px;
     transition: 0.3s;
+    max-width: 100%;
 }
 .glass-input:focus { border-color: white; outline: none; background: rgba(255, 255, 255, 0.8); }
 
@@ -96,74 +129,105 @@ main { padding: 0 15px; max-width: 1200px; margin: auto; }
     border: none; border-radius: 50px; 
     cursor: pointer; transition: all 0.3s ease;
     width: 100%;
+    max-width: 100%;
 }
 .glass-btn.primary { background: white; color: var(--primary-color); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
 .glass-btn.primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
 .glass-btn.danger { background: var(--danger-color); color: white; }
 .glass-btn.outline { background: transparent; border: 2px solid white; color: white; }
+.glass-btn.active-toggle { background: #ecfdf5 !important; color: var(--primary-color) !important; border-color: #10b981 !important; }
+
+/* ปุ่มโหมดย่ออยู่ในแผ่นการ์ดใส ต้องมีพื้นขาวเพื่อให้อ่านตัวหนังสือได้ */
+#compactModeBtn.glass-btn.outline {
+    background: #ffffff;
+    color: var(--primary-color);
+    border: 2px solid #ffffff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
 .small-btn { padding: 8px 20px; width: auto; font-size: 1rem; }
 
-/* Ward Grid */
-.ward-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
+.action-bar { padding: 14px; }
+.action-bar-row { display: flex; flex-direction: column; gap: 10px; }
+.install-hint {
+    margin: 14px 0 0 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-dark);
+    line-height: 1.4;
+}
+
+/* Ward Grid — 2 equal columns on phones, no min-width that overflows */
+.ward-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; width: 100%; }
 
 .ward-card {
     background: rgba(255, 255, 255, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.6);
     border-radius: 20px;
-    padding: 20px 10px;
+    padding: 16px 8px;
     text-align: center;
-    cursor: pointer; transition: all 0.2s; user-select: none;
+    cursor: pointer; transition: transform 0.28s ease, box-shadow 0.2s, background 0.2s, border-color 0.2s; user-select: none;
+    min-width: 0;
+    max-width: 100%;
+    position: relative;
 }
 .ward-card:active { transform: scale(0.95); }
 
 .ward-card h3 { 
     margin: 0 0 10px 0; 
-    font-size: 1.5rem; 
+    font-size: 1.15rem; 
     font-weight: 700; 
     color: var(--text-dark);
-    line-height: 1.2;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
 }
 
 .ward-card .time-stamp { 
-    font-size: 1rem; 
+    font-size: 0.95rem; 
     color: #047857; 
     background: rgba(255,255,255,0.5);
     border-radius: 10px;
-    padding: 4px 0;
+    padding: 4px 4px;
+    overflow-wrap: anywhere;
 }
 
 /* Dashboard UI */
-.header-dash { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px; margin-bottom: 15px; }
+.header-dash { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px; margin-bottom: 15px; gap: 10px; }
+.header-dash .title-text { min-width: 0; }
 .filters { display: flex; flex-direction: column; gap: 0; }
 .filters select { margin-bottom: 10px; }
 
-.stats-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.stats-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .stat-box { text-align: center; }
 .stat-label { margin: 0 0 5px 0; font-size: 0.95rem; font-weight: 500;}
-.stat-value { margin: 0; font-size: 1.6rem; color: var(--primary-color); font-weight: 700;}
+.stat-value { margin: 0; font-size: 1.4rem; color: var(--primary-color); font-weight: 700;}
 
 .history-list { max-height: 300px; overflow-y: auto; }
 .history-item { 
     display: flex; justify-content: space-between; align-items: center; 
     padding: 12px; border-bottom: 1px dashed rgba(0,0,0,0.1); 
     font-size: 1rem; font-weight: 500;
+    gap: 8px;
 }
 .history-item:last-child { border-bottom: none; }
 
 .z-pattern-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
 .ranking-list { padding-left: 20px; margin: 0; font-size: 1rem; font-weight: 500; }
-.ranking-list li { margin-bottom: 10px; }
+.ranking-list li { margin-bottom: 10px; overflow-wrap: anywhere; }
 
 .glass-badge {
-    position: fixed; bottom: 20px; right: 20px;
+    position: fixed; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); right: 12px;
     background: rgba(255,255,255,0.8);
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
     color: var(--text-dark);
-    padding: 12px 25px;
+    padding: 10px 16px;
     border-radius: 50px;
-    font-weight: 700; font-size: 1.1rem;
+    font-weight: 700; font-size: 1rem;
     box-shadow: var(--glass-shadow);
     z-index: 1000;
+    max-width: min(260px, calc(100vw - 24px));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* -------------------------------------
@@ -175,8 +239,9 @@ main { padding: 0 15px; max-width: 1200px; margin: auto; }
 
 .chart-container {
     position: relative;
-    height: 250px; /* ความสูงของกราฟ */
+    height: 250px;
     width: 100%;
+    max-width: 100%;
 }
 
 .leaderboard-item {
@@ -185,6 +250,7 @@ main { padding: 0 15px; max-width: 1200px; margin: auto; }
     align-items: center;
     padding: 10px;
     border-bottom: 1px dashed rgba(255,255,255,0.4);
+    gap: 8px;
 }
 .leaderboard-item:last-child { border-bottom: none; }
 .rank-badge {
@@ -218,6 +284,7 @@ main { padding: 0 15px; max-width: 1200px; margin: auto; }
     opacity: 0.6;
     transition: all 0.2s;
     width: 80%;
+    max-width: 100%;
     margin-left: auto;
     margin-right: auto;
     display: block;
@@ -264,6 +331,7 @@ main { padding: 0 15px; max-width: 1200px; margin: auto; }
     border: 1px solid rgba(0, 0, 0, 0.05);
     display: inline-block;
     transition: all 0.2s;
+    max-width: 100%;
 }
 .ward-phone:hover {
     background: rgba(255, 255, 255, 0.6);
@@ -299,9 +367,111 @@ main { padding: 0 15px; max-width: 1200px; margin: auto; }
 .ward-card.completed h3 { color: var(--primary-color) !important; }
 .ward-card.completed .time-stamp { background: #d1fae5 !important; color: #065f46 !important; font-weight: 600 !important; }
 
-/* 4. ถ้ารับยาไปแล้ว ให้ซ่อนปุ่มยาเย็นทิ้งไปเลย เพื่อความคลีน */
+/* รับยาแล้ว + มียาเย็น: พื้นฟ้าอ่อน ขอบเขียว เพื่อให้แยกจากการ์ดที่เช็คอย่างเดียว */
+.ward-card.completed.has-cold-med {
+    background: #dbeafe !important;
+    border: 3px solid #10b981 !important;
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.25) !important;
+}
+.ward-card.completed.has-cold-med h3 { color: #1e3a8a !important; }
+.ward-card.completed.has-cold-med .time-stamp {
+    background: rgba(255, 255, 255, 0.9) !important;
+    color: #1e3a8a !important;
+}
+
+/* 4. ถ้ารับยาไปแล้ว ในโหมดเต็มยังแสดงปุ่มยาเย็นได้ เพื่อปรับสถานะได้ */
 .ward-card.completed .cold-btn {
+    opacity: 0.85;
+}
+
+/* -------------------------------------
+   โหมดย่อ: กล่องสี่เหลี่ยม เห็นทุกวอร์ดในหน้าเดียว
+-------------------------------------- */
+.compact-hint {
+    display: none;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-dark);
+    margin: -8px 0 12px 0;
+    line-height: 1.4;
+}
+body.compact-mode .compact-hint { display: block; }
+
+body.compact-mode .ward-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+body.compact-mode .ward-card {
+    aspect-ratio: 1;
+    padding: 14px 4px 6px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+body.compact-mode .ward-card h3 {
+    font-size: clamp(0.58rem, 2.7vw, 0.78rem);
+    margin: 0;
+    line-height: 1.15;
+    font-weight: 700;
+}
+body.compact-mode .time-stamp,
+body.compact-mode .ward-phone,
+body.compact-mode .cold-btn {
     display: none !important;
+}
+
+body.compact-mode .ward-card.completed {
+    border: 3px solid #10b981 !important;
+    background: #ffffff !important;
+}
+body.compact-mode .ward-card.completed.has-cold-med {
+    background: #dbeafe !important;
+    border: 3px solid #10b981 !important;
+}
+body.compact-mode .ward-card.called-ward:not(.completed) {
+    border: 3px solid #ef4444 !important;
+}
+body.compact-mode .ward-card.called-ward.completed {
+    box-shadow: 0 0 0 2px #ef4444 inset, 0 8px 20px rgba(0,0,0,0.12) !important;
+}
+
+.compact-check {
+    display: none;
+    position: absolute;
+    top: 3px;
+    left: 5px;
+    font-size: 0.7rem;
+    color: #059669;
+    font-weight: 700;
+    line-height: 1;
+}
+body.compact-mode .ward-card.completed .compact-check { display: block; }
+
+.compact-cold-btn {
+    display: none;
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.75rem;
+    line-height: 1;
+    padding: 0;
+    opacity: 0.55;
+}
+body.compact-mode .compact-cold-btn { display: flex; align-items: center; justify-content: center; }
+body.compact-mode .ward-card.has-cold-med .compact-cold-btn {
+    opacity: 1;
+    background: #3b82f6;
+    color: white;
 }
 
 @media (min-width: 600px) {
@@ -309,4 +479,14 @@ main { padding: 0 15px; max-width: 1200px; margin: auto; }
     .filters select { margin-bottom: 0; }
     .z-pattern-grid { grid-template-columns: 1fr 1fr; }
     .btn-group { flex-direction: row; }
+    .action-bar-row { flex-direction: row; }
+    .action-bar-row .glass-btn { width: auto; flex: 1; }
+    .glass-card { padding: 25px; }
+    .title-text { font-size: 1.4rem; }
+    .glass-header h1 { font-size: 1.5rem; }
+    main { padding: 0 15px; }
+    .ward-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
+    .ward-card h3 { font-size: 1.35rem; }
+    body.compact-mode .ward-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    body.compact-mode .ward-card h3 { font-size: 0.8rem; }
 }
